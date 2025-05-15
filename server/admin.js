@@ -57,4 +57,80 @@ router.delete('/users/:id', authorizeRoles('admin', 'superadmin'), async (req, r
   }
 });
 
+router.get('/automation', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const rules = await knex('automation_rules').select('*');
+    res.json(rules);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/automation', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const { name, conditions, actions, enabled } = req.body;
+    const [rule] = await knex('automation_rules').insert({ name, conditions: JSON.stringify(conditions), actions: JSON.stringify(actions), enabled }).returning('*');
+    res.status(201).json(rule);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/automation/:id', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const { name, conditions, actions, enabled } = req.body;
+    const [rule] = await knex('automation_rules').where({ id: req.params.id }).update({ name, conditions: JSON.stringify(conditions), actions: JSON.stringify(actions), enabled }).returning('*');
+    res.json(rule);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/automation/:id', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    await knex('automation_rules').where({ id: req.params.id }).del();
+    res.json({ message: 'Automation rule deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/custom-fields', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const fields = await knex('custom_fields').select('*');
+    res.json(fields);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/custom-fields', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const { name, type, options, required } = req.body;
+    const [field] = await knex('custom_fields').insert({ name, type, options: JSON.stringify(options), required }).returning('*');
+    res.status(201).json(field);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/custom-fields/:id', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const { name, type, options, required } = req.body;
+    const [field] = await knex('custom_fields').where({ id: req.params.id }).update({ name, type, options: JSON.stringify(options), required }).returning('*');
+    res.json(field);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/custom-fields/:id', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    await knex('custom_fields').where({ id: req.params.id }).del();
+    res.json({ message: 'Custom field deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router; 
