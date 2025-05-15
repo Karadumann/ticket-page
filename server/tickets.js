@@ -65,4 +65,17 @@ router.get('/:id/messages', async (req, res) => {
   }
 });
 
+router.post('/suggest', (req, res) => {
+  const { content } = req.body;
+  let tags = [];
+  let priority = 'normal';
+  if (content) {
+    if (/error|bug|crash|fail/i.test(content)) tags.push('bug');
+    if (/urgent|asap|immediately/i.test(content)) priority = 'high';
+    if (/account|login|password/i.test(content)) tags.push('account');
+    if (/payment|refund|money/i.test(content)) tags.push('payment');
+  }
+  res.json({ tags, priority });
+});
+
 module.exports = router; 

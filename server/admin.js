@@ -148,4 +148,42 @@ router.get('/export/tickets', authorizeRoles('admin', 'superadmin'), async (req,
   }
 });
 
+router.get('/canned-responses', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const responses = await knex('canned_responses').select('*');
+    res.json(responses);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/canned-responses', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const { title, content, category } = req.body;
+    const [response] = await knex('canned_responses').insert({ title, content, category }).returning('*');
+    res.status(201).json(response);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put('/canned-responses/:id', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const { title, content, category } = req.body;
+    const [response] = await knex('canned_responses').where({ id: req.params.id }).update({ title, content, category }).returning('*');
+    res.json(response);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/canned-responses/:id', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    await knex('canned_responses').where({ id: req.params.id }).del();
+    res.json({ message: 'Canned response deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router; 
