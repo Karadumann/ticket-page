@@ -3,6 +3,7 @@ const router = express.Router();
 const knex = require('knex')(require('./knexfile').development);
 const { authorizeRoles } = require('./auth');
 const bcrypt = require('bcryptjs');
+const { Parser } = require('json2csv');
 
 // List users
 router.get('/users', authorizeRoles('admin', 'superadmin'), async (req, res) => {
@@ -128,6 +129,20 @@ router.delete('/custom-fields/:id', authorizeRoles('admin', 'superadmin'), async
   try {
     await knex('custom_fields').where({ id: req.params.id }).del();
     res.json({ message: 'Custom field deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Export tickets as CSV
+router.get('/export/tickets', authorizeRoles('admin', 'superadmin'), async (req, res) => {
+  try {
+    const tickets = await knex('tickets').select('*');
+    const parser = new Parser();
+    const csv = parser.parse(tickets);
+    res.header('Content-Type', 'text/csv');
+    res.attachment('tickets.csv');
+    res.send(csv);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
