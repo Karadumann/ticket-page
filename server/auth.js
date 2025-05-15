@@ -52,4 +52,17 @@ function generateJWT(user) {
   return jwt.sign({ id: user.id, displayName: user.displayName }, process.env.SESSION_SECRET || 'dev_secret', { expiresIn: '7d' });
 }
 
-module.exports = { passport, generateJWT }; 
+function authenticateJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.SESSION_SECRET || 'dev_secret', (err, user) => {
+    if (err) return res.status(403).json({ message: 'Invalid token' });
+    req.user = user;
+    next();
+  });
+}
+
+module.exports = { passport, generateJWT, authenticateJWT }; 

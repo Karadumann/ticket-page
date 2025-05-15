@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const { authenticateJWT } = require('./auth');
 
 const knex = require('knex')(require('./knexfile').development);
+
+router.use(authenticateJWT);
 
 // Create ticket
 router.post('/', async (req, res) => {
