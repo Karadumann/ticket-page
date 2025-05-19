@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Button, TextField, Typography, Paper, Alert, List, ListItem, ListItemText, Divider } from '@mui/material';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useNavigate } from 'react-router-dom';
 
 interface Ticket {
   _id: string;
@@ -15,6 +17,7 @@ const Tickets: React.FC = () => {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const navigate = useNavigate();
 
   const fetchTickets = async () => {
     setError('');
@@ -60,8 +63,16 @@ const Tickets: React.FC = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+  };
+
   return (
-    <Box maxWidth={700} mx="auto" width="100%">
+    <Box maxWidth={700} mx="auto" width="100%" position="relative">
+      <Button onClick={handleLogout} sx={{ position: 'absolute', top: 16, right: 16, minWidth: 0, borderRadius: '50%', p: 1, bgcolor: '#18181c', color: '#ff9100', boxShadow: 2, '&:hover': { bgcolor: '#ff9100', color: '#18181c' } }}>
+        <LogoutIcon fontSize="large" />
+      </Button>
       <Paper elevation={4} sx={{ p: 4, borderRadius: 3, mb: 4 }}>
         <Typography variant="h5" color="primary" fontWeight={700} mb={2} align="center">
           Create New Ticket

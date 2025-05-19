@@ -10,8 +10,8 @@ const theme = createTheme({
       main: '#23232b',
     },
     background: {
-      default: '#18181c',
-      paper: '#23232b',
+      default: 'linear-gradient(135deg, #18181c 0%, #ff9100 100%)',
+      paper: 'rgba(32,32,40,0.98)',
     },
     text: {
       primary: '#fff',
@@ -19,16 +19,17 @@ const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 20,
   },
   typography: {
-    fontFamily: 'Segoe UI, Arial, sans-serif',
-    h1: { fontWeight: 700 },
-    h2: { fontWeight: 700 },
-    h3: { fontWeight: 700 },
+    fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+    h1: { fontWeight: 900 },
+    h2: { fontWeight: 800 },
+    h3: { fontWeight: 800 },
     h4: { fontWeight: 700 },
     h5: { fontWeight: 700 },
     h6: { fontWeight: 700 },
+    button: { textTransform: 'none', fontWeight: 700 },
   },
 });
 
