@@ -100,7 +100,7 @@ app.use(express.json());
 
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 3, // 1 IP in 1 minute can make 100 requests
+  max: 100, // 1 IP in 1 minute can make 100 requests
   message: { message: 'Too many requests. Please try again later.' }
 });
 
