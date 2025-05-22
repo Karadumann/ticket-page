@@ -6,12 +6,24 @@ export interface IReply {
   createdAt: Date;
 }
 
+export interface ISatisfactionSurvey {
+  rating: number;
+  comment: string;
+  submittedAt: Date;
+}
+
 export interface ITicket extends Document {
   title: string;
   description: string;
-  status: 'open' | 'closed' | 'pending';
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
   user: mongoose.Types.ObjectId;
   replies: IReply[];
+  nickname: string;
+  screenshotUrls?: string[];
+  category: 'bug' | 'payment' | 'account' | 'suggestion' | 'report_player' | 'technical' | 'other';
+  priority: 'low' | 'medium' | 'high' | 'very_high';
+  assignedTo?: mongoose.Types.ObjectId;
+  satisfactionSurvey?: ISatisfactionSurvey;
 }
 
 const ReplySchema = new Schema<IReply>({
@@ -20,12 +32,27 @@ const ReplySchema = new Schema<IReply>({
   createdAt: { type: Date, default: Date.now },
 });
 
+const SatisfactionSurveySchema = new Schema<ISatisfactionSurvey>({
+  rating: { type: Number, required: true },
+  comment: { type: String },
+  submittedAt: { type: Date, default: Date.now },
+}, { _id: false });
+
 const TicketSchema = new Schema<ITicket>({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  status: { type: String, enum: ['open', 'closed', 'pending'], default: 'open' },
+  status: { type: String, enum: ['open', 'in_progress', 'resolved', 'closed'], default: 'open' },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   replies: [ReplySchema],
+  nickname: { type: String, required: true },
+  screenshotUrls: [{ type: String }],
+  category: { type: String, enum: ['bug', 'payment', 'account', 'suggestion', 'report_player', 'technical', 'other'], required: true },
+  priority: { type: String, enum: ['low', 'medium', 'high', 'very_high'], required: true },
+  assignedTo: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  satisfactionSurvey: { type: SatisfactionSurveySchema, default: null },
 }, { timestamps: true });
+
+TicketSchema.index({ user: 1 });
+TicketSchema.index({ status: 1 });
 
 export default mongoose.model<ITicket>('Ticket', TicketSchema); 

@@ -1,21 +1,21 @@
 import { createTheme } from '@mui/material/styles';
 
-const theme = createTheme({
+export const getTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
-    mode: 'dark',
+    mode,
     primary: {
-      main: '#ff9100',
+      main: mode === 'light' ? '#3fa7ff' : '#3fa7ff',
     },
     secondary: {
-      main: '#23232b',
+      main: mode === 'light' ? '#e3f2fd' : '#f5f7fa',
     },
     background: {
-      default: 'linear-gradient(135deg, #18181c 0%, #ff9100 100%)',
-      paper: 'rgba(32,32,40,0.98)',
+      default: mode === 'light' ? '#f7fafc' : '#f0f4f8',
+      paper: mode === 'light' ? '#fff' : '#f7fafc',
     },
     text: {
-      primary: '#fff',
-      secondary: '#ff9100',
+      primary: mode === 'light' ? '#23232b' : '#23232b',
+      secondary: mode === 'light' ? '#3fa7ff' : '#3fa7ff',
     },
   },
   shape: {
@@ -31,6 +31,4 @@ const theme = createTheme({
     h6: { fontWeight: 700 },
     button: { textTransform: 'none', fontWeight: 700 },
   },
-});
-
-export default theme; 
+}); 

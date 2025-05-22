@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Button, TextField, Typography, Paper, Alert } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -22,7 +23,16 @@ const Login: React.FC = () => {
         setError(data.message || 'Login failed.');
       } else {
         localStorage.setItem('token', data.token);
-        navigate('/tickets');
+        try {
+          const decoded: any = jwtDecode(data.token);
+          if (["admin", "superadmin", "staff", "moderator"].includes(decoded.role)) {
+            navigate('/admin');
+          } else {
+            navigate('/tickets');
+          }
+        } catch {
+          navigate('/tickets');
+        }
       }
     } catch (err) {
       setError('Server error.');

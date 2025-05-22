@@ -1,16 +1,95 @@
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+  --background: rgb(240, 248, 255);
+  --foreground: rgb(55, 65, 81);
+  --card: rgb(255, 255, 255);
+  --card-foreground: rgb(55, 65, 81);
+  --popover: rgb(255, 255, 255);
+  --popover-foreground: rgb(55, 65, 81);
+  --primary: rgb(34, 197, 94);
+  --primary-foreground: rgb(255, 255, 255);
+  --secondary: rgb(224, 242, 254);
+  --secondary-foreground: rgb(75, 85, 99);
+  --muted: rgb(243, 244, 246);
+  --muted-foreground: rgb(107, 114, 128);
+  --accent: rgb(209, 250, 229);
+  --accent-foreground: rgb(55, 65, 81);
+  --destructive: rgb(239, 68, 68);
+  --destructive-foreground: rgb(255, 255, 255);
+  --border: rgb(229, 231, 235);
+  --input: rgb(229, 231, 235);
+  --ring: rgb(34, 197, 94);
+  --chart-1: rgb(34, 197, 94);
+  --chart-2: rgb(16, 185, 129);
+  --chart-3: rgb(5, 150, 105);
+  --chart-4: rgb(4, 120, 87);
+  --chart-5: rgb(6, 95, 70);
+  --sidebar: rgb(224, 242, 254);
+  --sidebar-foreground: rgb(55, 65, 81);
+  --sidebar-primary: rgb(34, 197, 94);
+  --sidebar-primary-foreground: rgb(255, 255, 255);
+  --sidebar-accent: rgb(209, 250, 229);
+  --sidebar-accent-foreground: rgb(55, 65, 81);
+  --sidebar-border: rgb(229, 231, 235);
+  --sidebar-ring: rgb(34, 197, 94);
+  --font-sans: DM Sans, sans-serif;
+  --font-serif: Lora, serif;
+  --font-mono: IBM Plex Mono, monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
+  --shadow: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 2px 4px -2px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 4px 6px -2px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 8px 10px -2px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
+}
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+.dark {
+  --background: rgb(15, 23, 42);
+  --foreground: rgb(209, 213, 219);
+  --card: rgb(30, 41, 59);
+  --card-foreground: rgb(209, 213, 219);
+  --popover: rgb(30, 41, 59);
+  --popover-foreground: rgb(209, 213, 219);
+  --primary: rgb(52, 211, 153);
+  --primary-foreground: rgb(15, 23, 42);
+  --secondary: rgb(45, 55, 72);
+  --secondary-foreground: rgb(161, 161, 170);
+  --muted: rgb(30, 41, 59);
+  --muted-foreground: rgb(107, 114, 128);
+  --accent: rgb(55, 65, 81);
+  --accent-foreground: rgb(161, 161, 170);
+  --destructive: rgb(239, 68, 68);
+  --destructive-foreground: rgb(15, 23, 42);
+  --border: rgb(75, 85, 99);
+  --input: rgb(75, 85, 99);
+  --ring: rgb(52, 211, 153);
+  --chart-1: rgb(52, 211, 153);
+  --chart-2: rgb(45, 212, 191);
+  --chart-3: rgb(34, 197, 94);
+  --chart-4: rgb(16, 185, 129);
+  --chart-5: rgb(5, 150, 105);
+  --sidebar: rgb(30, 41, 59);
+  --sidebar-foreground: rgb(209, 213, 219);
+  --sidebar-primary: rgb(52, 211, 153);
+  --sidebar-primary-foreground: rgb(15, 23, 42);
+  --sidebar-accent: rgb(55, 65, 81);
+  --sidebar-accent-foreground: rgb(161, 161, 170);
+  --sidebar-border: rgb(75, 85, 99);
+  --sidebar-ring: rgb(52, 211, 153);
+  --font-sans: DM Sans, sans-serif;
+  --font-serif: Lora, serif;
+  --font-mono: IBM Plex Mono, monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
+  --shadow: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 1px 2px -2px hsl(0 0% 0% / 0.10);
+  --shadow-md: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 2px 4px -2px hsl(0 0% 0% / 0.10);
+  --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 4px 6px -2px hsl(0 0% 0% / 0.10);
+  --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 8px 10px -2px hsl(0 0% 0% / 0.10);
+  --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
 }
 
 a {
@@ -26,8 +105,8 @@ body, #root {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-  background: linear-gradient(135deg, #18181c 0%, #ff9100 100%);
+  font-family: 'Cinzel', 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #33333b 0%, #000000 100%);
   background-size: 200% 200%;
   animation: gradient-move 30s ease-in-out infinite;
   color: #fff;
@@ -61,20 +140,17 @@ button, .MuiButton-root {
   transition: background 0.3s, color 0.3s, transform 0.2s, box-shadow 0.3s;
 }
 button:hover, .MuiButton-root:hover {
-  background: linear-gradient(90deg, #ff9100 0%, #ffb300 100%) !important;
+  background: linear-gradient(90deg, #08a115 0%, #00df55 100%) !important;
   color: inherit !important;
-  box-shadow: 0 8px 32px 0 rgba(255,145,0,0.18);
+  box-shadow: 0 8px 32px 0 rgba(8, 161, 21, 0.18);
   transform: scale(1.03);
 }
 
 .MuiPaper-root {
-  background: rgba(32,32,40,0.98) !important;
+  background: rgba(167, 167, 167, 0.11) !important;
   border-radius: 20px !important;
-  box-shadow: 0 8px 32px 0 rgba(255,145,0,0.10);
+  box-shadow: 0 8px 32px 0 rgba(8, 161, 21, 0.10);
   transition: box-shadow 0.3s;
-}
-.MuiPaper-root:hover {
-  box-shadow: 0 12px 40px 0 rgba(255,145,0,0.18);
 }
 
 .MuiTypography-root {
@@ -92,4 +168,16 @@ button:hover, .MuiButton-root:hover {
   button {
     background-color: #f9f9f9;
   }
+}
+
+/* MUI Dropdown (Menu, Select, TextField select) arka plan override */
+.MuiPaper-root.MuiMenu-paper {
+  background-color: #fff !important;
+  color: #222 !important;
+  opacity: 1 !important;
+}
+.dark .MuiPaper-root.MuiMenu-paper {
+  background-color: #23232b !important;
+  color: #eee !important;
+  opacity: 1 !important;
 }

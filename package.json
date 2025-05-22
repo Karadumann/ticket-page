@@ -4,6 +4,17 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^7.1.0",
     "@mui/material": "^7.1.0",
-    "animejs": "^4.0.2"
+    "animejs": "^4.0.2",
+    "express-rate-limit": "^7.5.0",
+    "jwt-decode": "^4.0.0",
+    "react-beautiful-dnd": "^13.1.1",
+    "react-toastify": "^11.0.5",
+    "react-tsparticles": "^2.12.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "tsparticles": "^3.8.1"
+  },
+  "devDependencies": {
+    "@types/react-beautiful-dnd": "^13.1.8"
   }
 }
