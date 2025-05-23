@@ -6,6 +6,7 @@ import MinimizeIcon from '@mui/icons-material/Minimize';
 import { io as socketIOClient, Socket } from 'socket.io-client';
 import { jwtDecode } from 'jwt-decode';
 import Badge from '@mui/material/Badge';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 interface ChatMessage {
   userId: string;
@@ -25,6 +26,7 @@ const AdminChat: React.FC = () => {
   const [user, setUser] = useState<{ userId: string; username: string; role: string } | null>(null);
   const [hasUnread, setHasUnread] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isMobile = useMediaQuery('(max-width:600px)');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -63,19 +65,33 @@ const AdminChat: React.FC = () => {
   if (!isAdmin) return null;
 
   return (
-    <Box sx={{ position: 'fixed', left: 24, bottom: 24, zIndex: 2000 }}>
+    <Box sx={{ position: 'fixed', left: isMobile ? 8 : 24, bottom: isMobile ? 8 : 24, zIndex: 2000 }}>
       {!open && (
         <Fade in={!open}>
           <Badge color="error" variant="dot" invisible={!hasUnread} overlap="circular" anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
-            <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: '#1976d2', color: '#fff', boxShadow: 3, '&:hover': { bgcolor: '#1565c0' }, width: 56, height: 56 }}>
-              <ChatIcon fontSize="large" />
+            <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: '#1976d2', color: '#fff', boxShadow: 3, '&:hover': { bgcolor: '#1565c0' }, width: isMobile ? 44 : 56, height: isMobile ? 44 : 56 }}>
+              <ChatIcon fontSize={isMobile ? 'medium' : 'large'} />
             </IconButton>
           </Badge>
         </Fade>
       )}
       {open && (
         <Fade in={open}>
-          <Paper elevation={8} sx={{ width: 340, minHeight: minimized ? 56 : 380, maxHeight: 480, display: 'flex', flexDirection: 'column', position: 'relative', borderRadius: 3, boxShadow: 6, bgcolor: '#fff' }}>
+          <Paper elevation={8} sx={{
+            width: isMobile ? '95vw' : 340,
+            minHeight: minimized ? (isMobile ? 44 : 56) : (isMobile ? '40vh' : 380),
+            maxHeight: isMobile ? '80vh' : 480,
+            display: 'flex',
+            flexDirection: 'column',
+            position: 'relative',
+            borderRadius: isMobile ? 2 : 3,
+            boxShadow: 6,
+            bgcolor: '#fff',
+            left: 0,
+            bottom: 0,
+            right: 0,
+            mx: isMobile ? 'auto' : undefined,
+          }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 2, py: 1, borderBottom: '1px solid #e3f2fd', bgcolor: '#1976d2', color: '#fff', borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
               <Typography fontWeight={700} fontSize={17}>
                 {user ? `${user.username} (${user.role})` : 'Admin Chat'}
