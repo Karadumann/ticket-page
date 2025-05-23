@@ -5,6 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import MinimizeIcon from '@mui/icons-material/Minimize';
 import { io as socketIOClient, Socket } from 'socket.io-client';
 import { jwtDecode } from 'jwt-decode';
+import Badge from '@mui/material/Badge';
 
 interface ChatMessage {
   userId: string;
@@ -22,6 +23,7 @@ const AdminChat: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState<{ userId: string; username: string; role: string } | null>(null);
+  const [hasUnread, setHasUnread] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +42,10 @@ const AdminChat: React.FC = () => {
         setSocket(s);
         s.emit('join-admin-chat', { userId, username, role });
         s.on('admin-chat-history', (msgs: ChatMessage[]) => setMessages(msgs));
-        s.on('admin-chat-message', (msg: ChatMessage) => setMessages(prev => [...prev, msg]));
+        s.on('admin-chat-message', (msg: ChatMessage) => {
+          setMessages(prev => [...prev, msg]);
+          if (!open) setHasUnread(true);
+        });
         return () => { s.disconnect(); };
       }
     } catch (e) {
@@ -49,6 +54,7 @@ const AdminChat: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    if (open) setHasUnread(false);
     if (open && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -60,9 +66,11 @@ const AdminChat: React.FC = () => {
     <Box sx={{ position: 'fixed', left: 24, bottom: 24, zIndex: 2000 }}>
       {!open && (
         <Fade in={!open}>
-          <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: '#1976d2', color: '#fff', boxShadow: 3, '&:hover': { bgcolor: '#1565c0' }, width: 56, height: 56 }}>
-            <ChatIcon fontSize="large" />
-          </IconButton>
+          <Badge color="error" variant="dot" invisible={!hasUnread} overlap="circular" anchorOrigin={{ vertical: 'top', horizontal: 'right' }}>
+            <IconButton onClick={() => setOpen(true)} sx={{ bgcolor: '#1976d2', color: '#fff', boxShadow: 3, '&:hover': { bgcolor: '#1565c0' }, width: 56, height: 56 }}>
+              <ChatIcon fontSize="large" />
+            </IconButton>
+          </Badge>
         </Fade>
       )}
       {open && (
