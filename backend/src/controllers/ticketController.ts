@@ -3,6 +3,7 @@ import Ticket from '../models/Ticket';
 import Log from '../models/Log';
 import { io } from '../app';
 import Notification from '../models/Notification';
+import { PipelineStage } from 'mongoose';
 
 interface AuthRequest extends ExpressRequest {
   user?: any;
@@ -159,7 +160,7 @@ export const getAllTickets = async (req: any, res: any) => {
     }
 
     const [tickets, total] = await Promise.all([
-      Ticket.find(filter).skip(skip).limit(limit),
+      Ticket.find(filter).skip(skip).limit(limit).populate('assignedTo', 'username role'),
       Ticket.countDocuments(filter)
     ]);
     res.json({ tickets, total });
@@ -405,5 +406,68 @@ export const assignTicket = async (req: any, res: any) => {
     res.json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Failed to assign ticket.' });
+  }
+};
+
+// Dashboard Analytics: Summary
+export const getAnalyticsSummary = async (req: any, res: any) => {
+  try {
+    // Toplam ticket
+    const total = await Ticket.countDocuments();
+    // Çözülen ticket
+    const resolved = await Ticket.countDocuments({ status: 'resolved' });
+    // Ortalama çözülme süresi (sadece resolved ticketlar)
+    const resolvedTickets = await Ticket.find({ status: 'resolved' }, 'createdAt updatedAt');
+    let avgResolution = 0;
+    if (resolvedTickets.length > 0) {
+      const totalHours = resolvedTickets.reduce((sum, t) => {
+        const obj: any = t.toObject ? t.toObject() : t;
+        const created = new Date(obj.createdAt).getTime();
+        const updated = new Date(obj.updatedAt).getTime();
+        return sum + Math.max(0, (updated - created) / (1000 * 60 * 60));
+      }, 0);
+      avgResolution = +(totalHours / resolvedTickets.length).toFixed(2);
+    }
+    // Admin başına çözülen ticket sayısı
+    const pipeline: PipelineStage[] = [
+      { $match: { status: 'resolved', assignedTo: { $ne: null } } },
+      { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'admin' } },
+      { $unwind: '$admin' },
+      { $project: { name: '$admin.username', count: 1 } }
+    ];
+    const topAdmins = await Ticket.aggregate(pipeline);
+    res.json({ total, resolved, avgResolution, topAdmins });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch analytics summary.' });
+  }
+};
+
+// Dashboard Analytics: Weekly Trend
+export const getWeeklyTrend = async (req: any, res: any) => {
+  try {
+    const today = new Date();
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      days.push({
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        date: new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      });
+    }
+    // Her gün için ticket sayısı
+    const trend = await Promise.all(days.map(async (day, idx) => {
+      const start = day.date;
+      const end = new Date(day.date);
+      end.setDate(end.getDate() + 1);
+      const count = await Ticket.countDocuments({ createdAt: { $gte: start, $lt: end } });
+      return { day: day.label, tickets: count };
+    }));
+    res.json({ trend });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch weekly trend.' });
   }
 }; 

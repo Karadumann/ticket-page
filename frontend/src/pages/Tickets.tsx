@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, TextField, Typography, Paper, Alert, List, ListItem, Snackbar, Dialog, DialogTitle, DialogContent, DialogActions, Rating } from '@mui/material';
+import { Box, Button, TextField, Typography, Paper, Alert, List, ListItem, Snackbar } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
@@ -35,7 +35,6 @@ const Tickets: React.FC = () => {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string>('');
-  const [currentUserRole, setCurrentUserRole] = useState<string>('');
 
   const fetchTickets = async () => {
     setError('');
@@ -57,7 +56,6 @@ const Tickets: React.FC = () => {
       try {
         const decoded: any = jwtDecode(token);
         setCurrentUserId(decoded.id);
-        setCurrentUserRole(decoded.role);
         if (["admin", "superadmin", "staff", "moderator"].includes(decoded.role)) {
           navigate('/admin');
           return;

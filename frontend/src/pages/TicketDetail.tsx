@@ -235,17 +235,15 @@ const TicketDetail: React.FC = () => {
   if (!ticket) return null;
 
   return (
-    <Box maxWidth={900} mx="auto" mt={{ xs: 2, md: 6 }} boxSizing="border-box" sx={{ overflowX: 'hidden', px: { xs: 1, md: 0 } }}>
-      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mb: 2, bgcolor: 'var(--card)', color: 'var(--primary)', fontSize: { xs: 14, md: 16 }, px: { xs: 1.5, md: 3 }, '&:hover': { bgcolor: 'var(--primary)', color: 'var(--card)' } }}>
+    <Box maxWidth={900} mx="auto" mt={{ xs: 2, md: 6 }} boxSizing="border-box" sx={{ overflowX: 'hidden', px: { xs: 0.5, sm: 1, md: 0 } }}>
+      <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mb: 2, bgcolor: 'var(--card)', color: 'var(--primary)', fontSize: { xs: 13, md: 16 }, px: { xs: 1, md: 3 }, minWidth: { xs: 36, md: 64 }, borderRadius: 2, width: { xs: '100%', sm: 'auto' } }}>
         Back
       </Button>
-      {/* Admin Menüsü */}
       {isAdmin && (
-        <Box mb={2} display="flex" gap={2} alignItems="center">
-          <Button variant="outlined" color="primary" onClick={() => navigate('/admin')} sx={{ fontWeight: 700 }}>
+        <Box mb={2} display="flex" gap={2} alignItems="center" flexDirection={{ xs: 'column', sm: 'row' }}>
+          <Button variant="outlined" color="primary" onClick={() => navigate('/admin')} sx={{ fontWeight: 700, width: { xs: '100%', sm: 'auto' } }}>
             Go to the Admin Panel
           </Button>
-          {/* You can add admin actions here such as assign or close ticket if you want */}
         </Box>
       )}
       {/* Diğer admin/moderator izliyorsa uyarı */}
@@ -268,82 +266,270 @@ const TicketDetail: React.FC = () => {
           ))}
         </Alert>
       )}
-      <Paper elevation={4} sx={{ p: { xs: 2, md: 4 }, borderRadius: 4, mb: 4, bgcolor: 'var(--card)', color: 'var(--foreground)', boxShadow: 6, position: 'relative' }}>
+      <Paper elevation={4} sx={{ p: { xs: 1, sm: 2, md: 4 }, borderRadius: 4, mb: 4, bgcolor: 'var(--card)', color: 'var(--foreground)', boxShadow: 6, position: 'relative', width: '100%' }}>
         {/* Status badge at top right, only show on Details tab */}
         {tab === 0 && (
           <Box
             sx={{
-              position: 'absolute',
-              top: 24,
-              right: 24,
-              px: 2,
-              py: 0.5,
-              borderRadius: '9999px',
-              fontWeight: 700,
-              fontSize: { xs: 14, md: 16 },
-              bgcolor:
-                ticket.status === 'open'
-                  ? 'rgba(34,197,94,0.15)'
-                  : ticket.status === 'pending'
-                  ? 'rgba(251,191,36,0.15)'
-                  : ticket.status === 'in_progress'
-                  ? 'rgba(63,167,255,0.15)'
-                  : 'rgba(239,68,68,0.15)',
-              color:
-                ticket.status === 'open'
-                  ? '#22c55e'
-                  : ticket.status === 'pending'
-                  ? '#fbbf24'
-                  : ticket.status === 'in_progress'
-                  ? '#3fa7ff'
-                  : '#ef4444',
-              border: '2px solid',
-              borderColor:
-                ticket.status === 'open'
-                  ? '#22c55e'
-                  : ticket.status === 'pending'
-                  ? '#fbbf24'
-                  : ticket.status === 'in_progress'
-                  ? '#3fa7ff'
-                  : '#ef4444',
-              textTransform: 'capitalize',
-              zIndex: 10,
-              minWidth: 90,
-              textAlign: 'center',
+              display: { xs: 'flex', md: 'block' },
+              flexDirection: { xs: 'column', md: 'row' },
+              alignItems: { xs: 'flex-start', md: 'unset' },
+              gap: { xs: 1, md: 0 },
+              position: 'relative',
+              mb: { xs: 2, md: 0 },
             }}
           >
-            {ticket.status.replace('_', ' ')}
+            <Box
+              sx={{
+                position: { xs: 'static', md: 'absolute' },
+                top: { md: 24 },
+                right: { md: 24 },
+                px: 2,
+                py: 0.5,
+                borderRadius: '9999px',
+                fontWeight: 700,
+                fontSize: { xs: 14, md: 16 },
+                bgcolor:
+                  ticket.status === 'open'
+                    ? 'rgba(34,197,94,0.15)'
+                    : ticket.status === 'pending'
+                    ? 'rgba(251,191,36,0.15)'
+                    : ticket.status === 'in_progress'
+                    ? 'rgba(63,167,255,0.15)'
+                    : 'rgba(239,68,68,0.15)',
+                color:
+                  ticket.status === 'open'
+                    ? '#22c55e'
+                    : ticket.status === 'pending'
+                    ? '#fbbf24'
+                    : ticket.status === 'in_progress'
+                    ? '#3fa7ff'
+                    : '#ef4444',
+                border: '2px solid',
+                borderColor:
+                  ticket.status === 'open'
+                    ? '#22c55e'
+                    : ticket.status === 'pending'
+                    ? '#fbbf24'
+                    : ticket.status === 'in_progress'
+                    ? '#3fa7ff'
+                    : '#ef4444',
+                textTransform: 'capitalize',
+                zIndex: 10,
+                minWidth: 90,
+                textAlign: 'center',
+                mb: { xs: 1, md: 0 },
+              }}
+            >
+              {ticket.status.replace('_', ' ')}
+            </Box>
           </Box>
         )}
-        <Tabs value={tab} onChange={(_, v) => setTab(Number(v))} sx={{ mb: 2 }}>
-          <Tab label="Details" />
-          <Tab label="History & Survey" />
+        <Tabs value={tab} onChange={(_, v) => setTab(Number(v))} sx={{ mb: 2, minHeight: { xs: 36, md: 48 }, mt: { xs: 0, md: 0 } }}>
+          <Tab label="Details" sx={{ fontSize: { xs: 13, md: 16 } }} />
+          <Tab label="History & Survey" sx={{ fontSize: { xs: 13, md: 16 } }} />
         </Tabs>
         {tab === 0 && (
           <>
             {/* Ticket Details + Replies + Reply Form */}
             <Box display="flex" alignItems={{ xs: 'flex-start', md: 'center' }} flexDirection={{ xs: 'column', md: 'row' }} gap={2} mb={2}>
               <Box flex={1} width="100%">
+                {/* Meta Info Top Row */}
+                <Box display="flex" flexWrap="wrap" gap={2} mb={3} alignItems="center" flexDirection={{ xs: 'column', sm: 'row' }}>
+                  {/* Category */}
+                  {isAdmin ? (
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <InputLabel id="category-select-label">Category</InputLabel>
+                      <Select
+                        labelId="category-select-label"
+                        value={ticket.category || ''}
+                        label="Category"
+                        onChange={async e => {
+                          const newCategory = e.target.value;
+                          const res = await fetch(`/api/admin/tickets/${ticket._id}`, {
+                            method: 'PATCH',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({ category: newCategory })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            setTicket(data);
+                          }
+                        }}
+                      >
+                        <MenuItem value="bug">Bug</MenuItem>
+                        <MenuItem value="payment">Payment</MenuItem>
+                        <MenuItem value="account">Account</MenuItem>
+                        <MenuItem value="suggestion">Suggestion</MenuItem>
+                        <MenuItem value="report_player">Report Player</MenuItem>
+                        <MenuItem value="technical">Technical</MenuItem>
+                        <MenuItem value="other">Other</MenuItem>
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
+                      <b>Category:</b> {ticket.category ? ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1).replace('_', ' ') : '-'}
+                    </Typography>
+                  )}
+                  {/* Priority */}
+                  {isAdmin ? (
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <InputLabel id="priority-select-label">Priority</InputLabel>
+                      <Select
+                        labelId="priority-select-label"
+                        value={ticket.priority || ''}
+                        label="Priority"
+                        onChange={async e => {
+                          const newPriority = e.target.value;
+                          const res = await fetch(`/api/admin/tickets/${ticket._id}`, {
+                            method: 'PATCH',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({ priority: newPriority })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            setTicket(data);
+                          }
+                        }}
+                      >
+                        <MenuItem value="very_high">Very High</MenuItem>
+                        <MenuItem value="high">High</MenuItem>
+                        <MenuItem value="medium">Medium</MenuItem>
+                        <MenuItem value="low">Low</MenuItem>
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
+                      <b>Priority:</b> {ticket.priority ? (ticket.priority === 'very_high' ? 'Very High' : ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)) : '-'}
+                    </Typography>
+                  )}
+                  {/* Status */}
+                  {isAdmin ? (
+                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                      <InputLabel id="status-select-label">Status</InputLabel>
+                      <Select
+                        labelId="status-select-label"
+                        value={ticket.status || ''}
+                        label="Status"
+                        onChange={async e => {
+                          const newStatus = e.target.value;
+                          const res = await fetch(`/api/admin/tickets/${ticket._id}/status`, {
+                            method: 'PATCH',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            },
+                            body: JSON.stringify({ status: newStatus })
+                          });
+                          if (res.ok) {
+                            const data = await res.json();
+                            setTicket(data);
+                          }
+                        }}
+                      >
+                        <MenuItem value="open">Open</MenuItem>
+                        <MenuItem value="in_progress">In Progress</MenuItem>
+                        <MenuItem value="resolved">Resolved</MenuItem>
+                        <MenuItem value="closed">Closed</MenuItem>
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
+                      <b>Status:</b> {ticket.status ? ticket.status.replace('_', ' ') : '-'}
+                    </Typography>
+                  )}
+                  {/* Created */}
+                  <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
+                    <b>Created:</b> {new Date(ticket.createdAt).toLocaleString()}
+                  </Typography>
+                  {/* User */}
+                  <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
+                    <b>User:</b> {getUsername(ticket.user)}
+                  </Typography>
+                  {/* Assigned */}
+                  {isAdmin ? (
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}><b>Assigned:</b></Typography>
+                      <FormControl size="small" sx={{ minWidth: 140 }}>
+                        <InputLabel id="assign-select-label">Assignee</InputLabel>
+                        <Select
+                          labelId="assign-select-label"
+                          value={selectedAssignee}
+                          label="Assignee"
+                          onChange={async e => {
+                            setSelectedAssignee(e.target.value);
+                            setAssignError('');
+                            setAssignSuccess('');
+                            setAssigning(true);
+                            try {
+                              const res = await fetch(`/api/admin/tickets/${ticket._id}/assign`, {
+                                method: 'PATCH',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${localStorage.getItem('token')}`
+                                },
+                                body: JSON.stringify({ assignedTo: e.target.value || null })
+                              });
+                              const data = await res.json();
+                              if (res.ok) {
+                                setTicket(data);
+                                setAssignSuccess('Assigned successfully.');
+                                setSelectedAssignee((data.assignedTo as any)?._id || data.assignedTo || '');
+                              } else {
+                                setAssignError(data.message || 'Failed to assign.');
+                              }
+                            } catch {
+                              setAssignError('Server error.');
+                            }
+                            setAssigning(false);
+                          }}
+                          disabled={assigning}
+                        >
+                          <MenuItem value="">Unassigned</MenuItem>
+                          {users.filter(u => ['admin','superadmin','staff','moderator'].includes(u.role)).map(u => (
+                            <MenuItem key={u._id} value={u._id}>{u.username} ({u.role})</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Snackbar open={!!assignError} autoHideDuration={4000} onClose={() => setAssignError('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }} sx={{ mt: 24, zIndex: 2000 }}>
+                        <MuiAlert onClose={() => setAssignError('')} severity="error" sx={{ width: '100%' }}>{assignError}</MuiAlert>
+                      </Snackbar>
+                      <Snackbar open={!!assignSuccess} autoHideDuration={2000} onClose={() => setAssignSuccess('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }} sx={{ mt: 24, zIndex: 2000 }}>
+                        <MuiAlert onClose={() => setAssignSuccess('')} severity="success" sx={{ width: '100%' }}>{assignSuccess}</MuiAlert>
+                      </Snackbar>
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
+                      <b>Assigned:</b> {ticket.assignedTo ? `${ticket.assignedTo.username} (${ticket.assignedTo.role})` : 'Unassigned'}
+                    </Typography>
+                  )}
+                </Box>
                 {/* Title */}
-                <Box display="flex" alignItems="center" gap={1.5} mb={1}>
-                  <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 16, md: 18 }, minWidth: 120, textAlign: 'right' }}>Title:</Typography>
-                  <Typography variant="h5" sx={{ color: 'var(--primary)', fontWeight: 700, wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: { xs: 18, md: 22 } }}>{ticket.title}</Typography>
+                <Box display="flex" alignItems="center" gap={1.5} mb={1} flexDirection="row">
+                  <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 15, md: 18 }, minWidth: 100, textAlign: 'left' }}>Title:</Typography>
+                  <Typography variant="h5" sx={{ color: 'var(--primary)', fontWeight: 700, wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: { xs: 16, md: 22 }, textAlign: 'left' }}>{ticket.title}</Typography>
                 </Box>
                 {/* Description */}
-                <Box display="flex" alignItems="center" gap={1.5} mb={1}>
-                  <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 16, md: 18 }, minWidth: 120, textAlign: 'right' }}>Description:</Typography>
-                  <Typography variant="body1" sx={{ color: 'var(--foreground)', wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: { xs: 16, md: 18 } }}>{ticket.description}</Typography>
+                <Box display="flex" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={1.5} mb={1} flexDirection={{ xs: 'column', sm: 'row' }}>
+                  <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 15, md: 18 }, minWidth: 100, textAlign: { xs: 'left', sm: 'right' } }}>Description:</Typography>
+                  <Typography variant="body1" sx={{ color: 'var(--foreground)', wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: { xs: 15, md: 18 } }}>{ticket.description}</Typography>
                 </Box>
                 {/* In-game Nickname */}
-                <Box display="flex" alignItems="center" gap={1.5} mb={1}>
-                  <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 16, md: 18 }, minWidth: 120, textAlign: 'right' }}>In-game Nickname:</Typography>
-                  <Typography variant="body1" sx={{ color: 'var(--primary)', fontWeight: 600, fontSize: { xs: 16, md: 18 } }}>{ticket.nickname || '-'}</Typography>
+                <Box display="flex" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={1.5} mb={1} flexDirection={{ xs: 'column', sm: 'row' }}>
+                  <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 15, md: 18 }, minWidth: 100, textAlign: { xs: 'left', sm: 'right' } }}>In-game Nickname:</Typography>
+                  <Typography variant="body1" sx={{ color: 'var(--primary)', fontWeight: 600, fontSize: { xs: 15, md: 18 } }}>{ticket.nickname || '-'}</Typography>
                 </Box>
                 {Array.isArray(ticket.screenshotUrls) && ticket.screenshotUrls.length > 0 && (
                   <Box display="flex" flexDirection="column" gap={0.5} mt={1}>
-                    <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 15, md: 18 } }}>Screenshots:</Typography>
+                    <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 14, md: 18 } }}>Screenshots:</Typography>
                     {(ticket.screenshotUrls || []).map((url: string, i: number) => (
-                      <Typography key={i} variant="body2" sx={{ color: 'var(--primary)', fontSize: { xs: 13, md: 15 } }}>
+                      <Typography key={i} variant="body2" sx={{ color: 'var(--primary)', fontSize: { xs: 12, md: 15 } }}>
                         <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Screenshot {(ticket.screenshotUrls && ticket.screenshotUrls.length > 1) ? `#${i + 1}` : ''}</a>
                       </Typography>
                     ))}
@@ -351,104 +537,19 @@ const TicketDetail: React.FC = () => {
                 )}
               </Box>
             </Box>
-            {/* Meta Info Row */}
-            <Box display="flex" gap={2} flexWrap="wrap" mb={2} alignItems="center">
-              <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
-                <b>Category:</b> {ticket.category ? ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1).replace('_', ' ') : '-'}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
-                <b>Priority:</b> {ticket.priority ? (ticket.priority === 'very_high' ? 'Very High' : ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1)) : '-'}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
-                <b>Created:</b> {new Date(ticket.createdAt).toLocaleString()}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
-                <b>Updated:</b> {new Date(ticket.updatedAt).toLocaleString()}
-              </Typography>
-              <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
-                <b>User:</b> {getUsername(ticket.user)}
-              </Typography>
-              {/* Assigned: admin can assign, user sees only */}
-              {isAdmin ? (
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}><b>Assigned:</b></Typography>
-                  <FormControl size="small" sx={{ minWidth: 140 }}>
-                    <InputLabel id="assign-select-label">Assignee</InputLabel>
-                    <Select
-                      labelId="assign-select-label"
-                      value={selectedAssignee}
-                      label="Assignee"
-                      onChange={e => setSelectedAssignee(e.target.value)}
-                      disabled={assigning}
-                    >
-                      <MenuItem value="">Unassigned</MenuItem>
-                      {users.filter(u => ['admin','superadmin','staff','moderator'].includes(u.role)).map(u => (
-                        <MenuItem key={u._id} value={u._id}>{u.username} ({u.role})</MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    sx={{ ml: 1, fontSize: 13, fontWeight: 700 }}
-                    disabled={
-                      assigning ||
-                      selectedAssignee ===
-                        ((ticket.assignedTo as any)?._id || ticket.assignedTo || '')
-                    }
-                    onClick={async () => {
-                      setAssignError('');
-                      setAssignSuccess('');
-                      setAssigning(true);
-                      try {
-                        const res = await fetch(`/api/admin/tickets/${ticket._id}/assign`, {
-                          method: 'PATCH',
-                          headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`
-                          },
-                          body: JSON.stringify({ assignedTo: selectedAssignee || null })
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                          setTicket(data);
-                          setAssignSuccess('Assigned successfully.');
-                          setSelectedAssignee(
-                            (data.assignedTo as any)?._id || data.assignedTo || ''
-                          );
-                        } else {
-                          setAssignError(data.message || 'Failed to assign.');
-                        }
-                      } catch {
-                        setAssignError('Server error.');
-                      }
-                      setAssigning(false);
-                    }}
-                  >Assign</Button>
-                  <Snackbar open={!!assignError} autoHideDuration={4000} onClose={() => setAssignError('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                    <MuiAlert onClose={() => setAssignError('')} severity="error" sx={{ width: '100%' }}>{assignError}</MuiAlert>
-                  </Snackbar>
-                  <Snackbar open={!!assignSuccess} autoHideDuration={2000} onClose={() => setAssignSuccess('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                    <MuiAlert onClose={() => setAssignSuccess('')} severity="success" sx={{ width: '100%' }}>{assignSuccess}</MuiAlert>
-                  </Snackbar>
-                </Box>
-              ) : (
-                <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>
-                  <b>Assigned:</b> {ticket.assignedTo ? `${ticket.assignedTo.username} (${ticket.assignedTo.role})` : 'Unassigned'}
-                </Typography>
-              )}
-            </Box>
             {/* Replies */}
             <Box mt={4}>
-              <Typography variant="h6" sx={{ color: 'var(--primary)', mb: 1, fontSize: { xs: 16, md: 20 } }}>Replies</Typography>
+              <Typography variant="h6" sx={{ color: 'var(--primary)', mb: 1, fontSize: { xs: 15, md: 20 } }}>Replies</Typography>
               <Box>
-                {ticket.replies.length === 0 && <Typography sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 16 } }}>No replies yet.</Typography>}
+                {ticket.replies.length === 0 && <Typography sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 12, md: 16 } }}>No replies yet.</Typography>}
                 {ticket.replies.map((r, i) => (
-                  <Box key={i} mb={2} sx={{ wordBreak: 'break-word', whiteSpace: 'pre-line', bgcolor: 'var(--card)', borderRadius: 2, p: { xs: 1, md: 2 }, boxShadow: 1 }}>
-                    <Typography variant="body2" sx={{ color: 'var(--foreground)', wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: { xs: 13, md: 16 } }}>{r.message}</Typography>
+                  <Box key={i} mb={2} sx={{ wordBreak: 'break-word', whiteSpace: 'pre-line', bgcolor: 'var(--card)', borderRadius: 1, p: { xs: 1.5, md: 2 }, boxShadow: 1, overflow: 'hidden', position: 'relative' }}>
+                    <Typography variant="body2" sx={{ color: 'var(--foreground)', wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: { xs: 12, md: 16 }, p: 0, m: 0 }}>
+                      {r.message}
+                    </Typography>
                     <Box display="flex" alignItems="center" gap={2} mt={1} flexDirection={{ xs: 'column', md: 'row' }}>
-                      <Typography variant="caption" sx={{ color: 'var(--primary)', fontSize: { xs: 12, md: 14 } }}>By: {getUsername(r.user)}{getUserRole(r.user) === 'admin' ? ' (admin)' : ''}</Typography>
-                      <Typography variant="caption" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 12, md: 14 } }}>{new Date(r.createdAt).toLocaleString()}</Typography>
+                      <Typography variant="caption" sx={{ color: 'var(--primary)', fontSize: { xs: 11, md: 14 } }}>By: {getUsername(r.user)}{getUserRole(r.user) === 'admin' ? ' (admin)' : ''}</Typography>
+                      <Typography variant="caption" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 11, md: 14 } }}>{new Date(r.createdAt).toLocaleString()}</Typography>
                     </Box>
                   </Box>
                 ))}
@@ -508,9 +609,9 @@ const TicketDetail: React.FC = () => {
                     margin="normal"
                     multiline
                     minRows={2}
-                    sx={{ fontSize: { xs: 13, md: 16 } }}
+                    sx={{ fontSize: { xs: 12, md: 16 } }}
                   />
-                  <Button type="submit" variant="contained" disabled={!replyMsg.trim()} sx={{ mt: 1, bgcolor: 'var(--primary)', color: 'var(--primary-foreground)', fontWeight: 700, fontSize: { xs: 14, md: 16 }, '&:hover': { bgcolor: 'var(--primary-foreground)', color: 'var(--primary)' } }}>
+                  <Button type="submit" variant="contained" disabled={!replyMsg.trim()} sx={{ mt: 1, bgcolor: 'var(--primary)', color: 'var(--primary-foreground)', fontWeight: 700, fontSize: { xs: 13, md: 16 }, width: { xs: '100%', sm: 'auto' }, '&:hover': { bgcolor: 'var(--primary-foreground)', color: 'var(--primary)' } }}>
                     Send Reply
                   </Button>
                 </form>

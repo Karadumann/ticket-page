@@ -6,7 +6,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { io as socketIOClient, Socket } from 'socket.io-client';
@@ -30,6 +30,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import useMediaQuery from '@mui/material/useMediaQuery';
+import Drawer from '@mui/material/Drawer';
 
 interface User {
   _id: string;
@@ -64,6 +65,106 @@ const getUsername = (userId: string, users: User[] = []) => {
   return user ? user.username : userId;
 };
 
+// Ortak Admin Header
+interface AdminHeaderProps {
+  activeSection: 'dashboard' | 'users' | 'tickets' | 'logs';
+  onSectionChange: (section: 'dashboard' | 'users' | 'tickets' | 'logs') => void;
+  isSuperAdmin?: boolean;
+}
+export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeSection, onSectionChange, isSuperAdmin }) => (
+  <Box
+    component="header"
+    sx={{
+      width: '100vw',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      zIndex: 1300,
+      bgcolor: 'var(--sidebar)',
+      color: 'var(--sidebar-foreground)',
+      boxShadow: 2,
+      display: 'flex',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      px: { xs: 1, sm: 2, md: 4, xl: 8 },
+      py: { xs: 1, md: 2 },
+      minHeight: { xs: 56, md: 72 },
+      gap: 2,
+    }}
+  >
+    <Typography variant="h6" fontWeight={700} color="var(--primary)" sx={{ fontSize: { xs: 18, md: 24, xl: 28 } }}>Admin Menu</Typography>
+    <Box display="flex" gap={2}>
+      <Button
+        variant={activeSection === 'dashboard' ? 'contained' : 'text'}
+        sx={{
+          bgcolor: activeSection === 'dashboard' ? 'var(--primary)' : 'transparent',
+          color: activeSection === 'dashboard' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+          fontWeight: 700,
+          borderRadius: '9999px',
+          fontSize: { xs: 14, md: 18 },
+          px: { xs: 2, md: 4 },
+          boxShadow: activeSection === 'dashboard' ? '0 2px 12px 0 var(--primary)' : 'none',
+          '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
+        }}
+        onClick={() => onSectionChange('dashboard')}
+      >
+        Dashboard
+      </Button>
+      <Button
+        variant={activeSection === 'users' ? 'contained' : 'text'}
+        sx={{
+          bgcolor: activeSection === 'users' ? 'var(--primary)' : 'transparent',
+          color: activeSection === 'users' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+          fontWeight: 700,
+          borderRadius: '9999px',
+          fontSize: { xs: 14, md: 18 },
+          px: { xs: 2, md: 4 },
+          boxShadow: activeSection === 'users' ? '0 2px 12px 0 var(--primary)' : 'none',
+          '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
+        }}
+        onClick={() => onSectionChange('users')}
+      >
+        Users
+      </Button>
+      <Button
+        variant={activeSection === 'tickets' ? 'contained' : 'text'}
+        sx={{
+          bgcolor: activeSection === 'tickets' ? 'var(--primary)' : 'transparent',
+          color: activeSection === 'tickets' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+          fontWeight: 700,
+          borderRadius: '9999px',
+          fontSize: { xs: 14, md: 18 },
+          px: { xs: 2, md: 4 },
+          boxShadow: activeSection === 'tickets' ? '0 2px 12px 0 var(--primary)' : 'none',
+          '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
+        }}
+        onClick={() => onSectionChange('tickets')}
+      >
+        Tickets
+      </Button>
+      {isSuperAdmin && (
+        <Button
+          variant={activeSection === 'logs' ? 'contained' : 'text'}
+          sx={{
+            bgcolor: activeSection === 'logs' ? 'var(--primary)' : 'transparent',
+            color: activeSection === 'logs' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+            fontWeight: 700,
+            borderRadius: '9999px',
+            fontSize: { xs: 14, md: 18 },
+            px: { xs: 2, md: 4 },
+            boxShadow: activeSection === 'logs' ? '0 2px 12px 0 var(--primary)' : 'none',
+            '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
+          }}
+          onClick={() => onSectionChange('logs')}
+        >
+          Logs
+        </Button>
+      )}
+    </Box>
+  </Box>
+);
+
 const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -90,7 +191,6 @@ const AdminPanel: React.FC = () => {
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [deleteTicketId, setDeleteTicketId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<'users' | 'tickets' | 'logs'>('tickets');
   const [userPage, setUserPage] = useState(1);
   const [ticketPage, setTicketPage] = useState(1);
   const USERS_PER_PAGE = 20;
@@ -106,10 +206,18 @@ const AdminPanel: React.FC = () => {
   const [toDate, setToDate] = useState<Dayjs | null>(null);
   const [admins, setAdmins] = useState<User[]>([]);
   const [onlineAdmins, setOnlineAdmins] = useState<User[]>([]);
-  let userId = '';
-
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useMediaQuery('(max-width:600px)');
+  const [activeSection, setActiveSection] = useState<'dashboard' | 'users' | 'tickets' | 'logs'>(() => {
+    if (location.pathname.startsWith('/dashboard') || location.pathname === '/') return 'dashboard';
+    if (location.pathname.startsWith('/admin')) {
+      // Varsayılanı tickets yap
+      return 'tickets';
+    }
+    return 'dashboard';
+  });
+  let userId = '';
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -636,6 +744,24 @@ const AdminPanel: React.FC = () => {
     );
   }
 
+  const handleSectionChange = (section: 'dashboard' | 'users' | 'tickets' | 'logs') => {
+    setActiveSection(section);
+    if (section === 'dashboard') navigate('/dashboard');
+    else if (section === 'users') navigate('/admin?section=users');
+    else if (section === 'tickets') navigate('/admin?section=tickets');
+    else if (section === 'logs') navigate('/admin?section=logs');
+  };
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard') || location.pathname === '/') setActiveSection('dashboard');
+    else if (location.pathname.startsWith('/admin')) {
+      // /admin/users, /admin/tickets, /admin/logs gibi route'lar için
+      if (location.pathname.includes('users')) setActiveSection('users');
+      else if (location.pathname.includes('logs')) setActiveSection('logs');
+      else setActiveSection('tickets');
+    }
+  }, [location.pathname]);
+
   if (!isAdmin) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh"><Alert severity="error">Unauthorized. Only admins can access this page.</Alert></Box>;
   }
@@ -643,82 +769,34 @@ const AdminPanel: React.FC = () => {
   return (
     <>
       <ToastContainer position="top-center" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="colored" />
-      {/* Header */}
-      <Box
-        component="header"
-        sx={{
-          width: '100vw',
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          zIndex: 1300,
-          bgcolor: 'var(--sidebar)',
-          color: 'var(--sidebar-foreground)',
-          boxShadow: 2,
-          display: 'flex',
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          px: { xs: 1, sm: 2, md: 4, xl: 8 },
-          py: { xs: 1, md: 2 },
-          minHeight: { xs: 56, md: 72 },
-          gap: 2,
-        }}
-      >
-        <Typography variant="h6" fontWeight={700} color="var(--primary)" sx={{ fontSize: { xs: 18, md: 24, xl: 28 } }}>Admin Menu</Typography>
-        <Box display="flex" gap={2}>
-          <Button
-            variant={activeSection === 'users' ? 'contained' : 'text'}
-            sx={{
-              bgcolor: activeSection === 'users' ? 'var(--primary)' : 'transparent',
-              color: activeSection === 'users' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-              fontWeight: 700,
-              borderRadius: '9999px',
-              fontSize: { xs: 14, md: 18 },
-              px: { xs: 2, md: 4 },
-              boxShadow: activeSection === 'users' ? '0 2px 12px 0 var(--primary)' : 'none',
-              '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-            }}
-            onClick={() => setActiveSection('users')}
-          >
-            Users
-          </Button>
-          <Button
-            variant={activeSection === 'tickets' ? 'contained' : 'text'}
-            sx={{
-              bgcolor: activeSection === 'tickets' ? 'var(--primary)' : 'transparent',
-              color: activeSection === 'tickets' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-              fontWeight: 700,
-              borderRadius: '9999px',
-              fontSize: { xs: 14, md: 18 },
-              px: { xs: 2, md: 4 },
-              boxShadow: activeSection === 'tickets' ? '0 2px 12px 0 var(--primary)' : 'none',
-              '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-            }}
-            onClick={() => setActiveSection('tickets')}
-          >
-            Tickets
-          </Button>
-          {isSuperAdmin && (
-            <Button
-              variant={activeSection === 'logs' ? 'contained' : 'text'}
-              sx={{
-                bgcolor: activeSection === 'logs' ? 'var(--primary)' : 'transparent',
-                color: activeSection === 'logs' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-                fontWeight: 700,
-                borderRadius: '9999px',
-                fontSize: { xs: 14, md: 18 },
-                px: { xs: 2, md: 4 },
-                boxShadow: activeSection === 'logs' ? '0 2px 12px 0 var(--primary)' : 'none',
-                '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-              }}
-              onClick={() => setActiveSection('logs')}
-            >
-              Logs
-            </Button>
-          )}
-        </Box>
-      </Box>
+      {/* Mobilde hamburger ve Drawer */}
+      {isMobile ? (
+        <>
+          <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" sx={{ position: 'fixed', top: 0, left: 0, zIndex: 1400, bgcolor: 'var(--sidebar)', px: 2, py: 1, boxShadow: 2 }}>
+            <IconButton onClick={() => setSidebarOpen(true)}>
+              <MenuIcon sx={{ color: 'var(--primary)', fontSize: 32 }} />
+            </IconButton>
+            <Box display="flex" alignItems="center" gap={2}>
+              {isAdmin && <NotificationBell userId={userId} sx={{ color: '#23232b', '&:hover': { bgcolor: '#e3f2fd' } }} />}
+              <Button onClick={handleLogout} sx={{ minWidth: 0, borderRadius: '50%', p: 1, bgcolor: '#ff5252', color: '#fff', boxShadow: 2, zIndex: 10, '&:hover': { bgcolor: '#d32f2f', color: '#fff' } }}>
+                <LogoutIcon fontSize="large" />
+              </Button>
+            </Box>
+          </Box>
+          <Drawer anchor="left" open={sidebarOpen} onClose={() => setSidebarOpen(false)}>
+            <Box width={220} role="presentation" onClick={() => setSidebarOpen(false)} onKeyDown={() => setSidebarOpen(false)} sx={{ mt: 2 }}>
+              <Typography variant="h6" fontWeight={700} color="var(--primary)" sx={{ mb: 2, ml: 2 }}>Admin Menu</Typography>
+              <Button fullWidth sx={{ justifyContent: 'flex-start', pl: 2, py: 1, fontWeight: 700, color: activeSection === 'dashboard' ? 'var(--primary)' : 'inherit' }} onClick={() => handleSectionChange('dashboard')}>Dashboard</Button>
+              <Button fullWidth sx={{ justifyContent: 'flex-start', pl: 2, py: 1, fontWeight: 700, color: activeSection === 'users' ? 'var(--primary)' : 'inherit' }} onClick={() => handleSectionChange('users')}>Users</Button>
+              <Button fullWidth sx={{ justifyContent: 'flex-start', pl: 2, py: 1, fontWeight: 700, color: activeSection === 'tickets' ? 'var(--primary)' : 'inherit' }} onClick={() => handleSectionChange('tickets')}>Tickets</Button>
+              {isSuperAdmin && <Button fullWidth sx={{ justifyContent: 'flex-start', pl: 2, py: 1, fontWeight: 700, color: activeSection === 'logs' ? 'var(--primary)' : 'inherit' }} onClick={() => handleSectionChange('logs')}>Logs</Button>}
+            </Box>
+          </Drawer>
+          <Box sx={{ pt: 8 }} />
+        </>
+      ) : (
+        <AdminHeader activeSection={activeSection} onSectionChange={handleSectionChange} isSuperAdmin={isSuperAdmin} />
+      )}
       {/* Main Content */}
       <Box
         sx={{
@@ -747,23 +825,17 @@ const AdminPanel: React.FC = () => {
           transition: 'background 0.3s',
         }}
       >
-        {/* Notification Bell */}
-        {isAdmin && (
-          <Box sx={{ position: 'absolute', top: 16, right: isMobile ? 60 : 120, zIndex: 12 }}>
-            <NotificationBell userId={userId} sx={{ color: '#23232b', '&:hover': { bgcolor: '#e3f2fd' } }} />
+        {/* Notification Bell ve Logout aynı hizada */}
+        {!isMobile && (
+          <Box display="flex" alignItems="center" justifyContent="flex-end" width="100%" mt={4} mb={4} gap={2}>
+            {isAdmin && (
+              <NotificationBell userId={userId} sx={{ color: '#23232b', '&:hover': { bgcolor: '#e3f2fd' } }} />
+            )}
+            <Button onClick={handleLogout} sx={{ minWidth: 0, borderRadius: '50%', p: 1, bgcolor: '#ff5252', color: '#fff', boxShadow: 2, zIndex: 10, '&:hover': { bgcolor: '#d32f2f', color: '#fff' } }}>
+              <LogoutIcon fontSize="large" />
+            </Button>
           </Box>
         )}
-        {/* Logout Button */}
-        <Button onClick={handleLogout} sx={{ position: 'absolute', top: 16, right: 16, minWidth: 0, borderRadius: '50%', p: 1, bgcolor: '#ff5252', color: '#fff', boxShadow: 2, zIndex: 10, '&:hover': { bgcolor: '#d32f2f', color: '#fff' } }}>
-          <LogoutIcon fontSize="large" />
-        </Button>
-        {/* Mobilde sidebar açma butonu */}
-        <Box display={{ xs: 'block', md: 'none' }} position="absolute" top={16} left={16} zIndex={1300}>
-          <IconButton onClick={() => setSidebarOpen(!sidebarOpen)}>
-            <MenuIcon sx={{ color: 'var(--primary)' }} />
-          </IconButton>
-        </Box>
-        <Typography variant="h4" color="primary" fontWeight={700} mb={4} align="center" mt={4} sx={{ fontSize: { xs: 24, md: 32 } }}></Typography>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {onlineAdmins.length > 0 && (
           <Box display="flex" alignItems="center" gap={2} mb={2} sx={{ bgcolor: '#e8f5e9', borderRadius: 2, px: 2, py: 1, minHeight: 48 }}>
@@ -1327,17 +1399,11 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
                         return (
                           <span>
                             <span style={{ fontWeight: 700, color: '#1976d2', marginRight: 8 }}>Ticket: </span>
-                            <a href={`/admin/tickets/${ticketId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontWeight: 700, fontSize: 15 }}>
-                              {ticketId}
-                            </a>
-                            <br />
-                            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: '#555', fontSize: 12 }}>{JSON.stringify(log.details, null, 2)}</pre>
+                            <a href={`/tickets/${ticketId}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>View Ticket</a>
                           </span>
                         );
                       }
-                      return (
-                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{JSON.stringify(log.details, null, 2)}</pre>
-                      );
+                      return <span />;
                     })()}
                   </td>
                 </tr>

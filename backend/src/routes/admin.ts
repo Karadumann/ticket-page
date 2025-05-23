@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getAllUsers, changeUserPassword, updateUser, deleteUser } from '../controllers/authController';
-import { getAllTickets, updateTicketStatus, deleteTicket, getTicketByIdAdmin, updateTicket, assignTicket } from '../controllers/ticketController';
+import { getAllTickets, updateTicketStatus, deleteTicket, getTicketByIdAdmin, updateTicket, assignTicket, getAnalyticsSummary, getWeeklyTrend } from '../controllers/ticketController';
 import authMiddleware, { requireAdmin, requireSuperAdmin } from '../middlewares/authMiddleware';
 import { getLogs, deleteAllLogs } from '../controllers/logController';
 import Notification from '../models/Notification';
@@ -51,14 +51,21 @@ router.get('/tickets/:id/logs', authMiddleware, requireAdmin, async (req, res) =
   }
 });
 
+// Online admins endpoint
 router.get('/online-admins', authMiddleware, requireAdmin, async (req, res) => {
   try {
+    const { getOnlineAdmins } = require('../utils/onlineAdmins');
     const ids = getOnlineAdmins();
-    const admins = await User.find({ _id: { $in: ids } }, 'username role email');
+    if (!ids.length) return res.json({ admins: [] });
+    const User = (await import('../models/User')).default;
+    const admins = await User.find({ _id: { $in: ids } }, 'username email role');
     res.json({ admins });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch online admins.' });
   }
 });
+
+router.get('/analytics/summary', authMiddleware, requireAdmin, getAnalyticsSummary);
+router.get('/analytics/weekly-trend', authMiddleware, requireAdmin, getWeeklyTrend);
 
 export default router; 
