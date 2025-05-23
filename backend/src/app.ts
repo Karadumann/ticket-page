@@ -19,6 +19,7 @@ export const io = new SocketIOServer(server, { cors: { origin: '*' } });
 
 const viewingTickets: { [ticketId: string]: { userId: string, username: string, role: string }[] } = {};
 const typingReplies: { [ticketId: string]: { userId: string, username: string, role: string }[] } = {};
+const adminChatMessages: { userId: string, username: string, role: string, message: string, timestamp: number }[] = [];
 
 io.on('connection', (socket) => {
   console.log('A user connected via Socket.IO');
@@ -66,6 +67,35 @@ io.on('connection', (socket) => {
       typingReplies[ticketId] = typingReplies[ticketId].filter(u => u.userId !== userId);
       io.emit('typing-reply-update', { ticketId, typers: typingReplies[ticketId] });
     }
+  });
+
+  // Admin chat join
+  socket.on('join-admin-chat', ({ userId, username, role }) => {
+    if (!userId || !["admin", "superadmin", "staff", "moderator"].includes(role)) return;
+    socket.join('admin-chat');
+    socket.data.adminChatUser = { userId, username, role };
+    // Son 30 mesajı gönder
+    socket.emit('admin-chat-history', adminChatMessages.slice(-30));
+  });
+
+  // Admin chat mesajı
+  socket.on('admin-chat-message', ({ message }) => {
+    const user = socket.data.adminChatUser;
+    console.log('admin-chat-message user:', user); // debug
+    if (!user || !message || typeof message !== 'string' || !message.trim()) return;
+    const msgObj = {
+      userId: user.userId,
+      username: user.username,
+      role: user.role,
+      message: message.trim(),
+      timestamp: Date.now()
+    };
+    console.log('admin-chat-message msgObj:', msgObj); // debug
+    if (!msgObj.userId || !msgObj.username || !msgObj.role) {
+      console.warn('Eksik mesaj bilgisi:', msgObj);
+    }
+    adminChatMessages.push(msgObj);
+    io.to('admin-chat').emit('admin-chat-message', msgObj);
   });
 
   const token = socket.handshake.query.token as string;

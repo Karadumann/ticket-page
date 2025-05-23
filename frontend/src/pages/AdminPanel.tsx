@@ -31,6 +31,7 @@ import { CSS } from '@dnd-kit/utilities';
 import OpenWithIcon from '@mui/icons-material/OpenWith';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Drawer from '@mui/material/Drawer';
+import AdminChat from '../components/AdminChat';
 
 interface User {
   _id: string;
@@ -1294,6 +1295,7 @@ const AdminPanel: React.FC = () => {
           </DialogActions>
         </Dialog>
       </Box>
+      <AdminChat />
     </>
   );
 };
