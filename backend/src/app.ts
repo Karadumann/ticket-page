@@ -10,6 +10,7 @@ import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { addOnlineAdmin, removeOnlineAdmin } from './utils/onlineAdmins';
 import jwt from 'jsonwebtoken';
+import AdminChatMessage from './models/AdminChatMessage';
 
 dotenv.config();
 
@@ -70,16 +71,17 @@ io.on('connection', (socket) => {
   });
 
   // Admin chat join
-  socket.on('join-admin-chat', ({ userId, username, role }) => {
+  socket.on('join-admin-chat', async ({ userId, username, role }) => {
     if (!userId || !["admin", "superadmin", "staff", "moderator"].includes(role)) return;
     socket.join('admin-chat');
     socket.data.adminChatUser = { userId, username, role };
-    // Son 30 mesajı gönder
-    socket.emit('admin-chat-history', adminChatMessages.slice(-30));
+    // Son 30 mesajı MongoDB'den çek
+    const lastMessages = await AdminChatMessage.find({}).sort({ timestamp: -1 }).limit(30).lean();
+    socket.emit('admin-chat-history', lastMessages.reverse());
   });
 
   // Admin chat mesajı
-  socket.on('admin-chat-message', ({ message }) => {
+  socket.on('admin-chat-message', async ({ message }) => {
     const user = socket.data.adminChatUser;
     console.log('admin-chat-message user:', user); // debug
     if (!user || !message || typeof message !== 'string' || !message.trim()) return;
@@ -94,7 +96,8 @@ io.on('connection', (socket) => {
     if (!msgObj.userId || !msgObj.username || !msgObj.role) {
       console.warn('Eksik mesaj bilgisi:', msgObj);
     }
-    adminChatMessages.push(msgObj);
+    adminChatMessages.push(msgObj); 
+    await AdminChatMessage.create(msgObj);
     io.to('admin-chat').emit('admin-chat-message', msgObj);
   });
 
