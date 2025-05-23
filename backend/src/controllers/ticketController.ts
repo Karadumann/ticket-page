@@ -55,6 +55,8 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
         details: { title, description, nickname, category, priority },
       });
     }
+    const ticketId = (ticket as any)._id?.toString();
+    io.to(ticketId).emit('ticket-updated', ticket);
     res.status(201).json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
@@ -131,6 +133,8 @@ export const replyTicket = async (req: AuthRequest, res: Response) => {
         details: { message },
       });
     }
+    const ticketId = (ticket as any)._id?.toString();
+    io.to(ticketId).emit('ticket-updated', ticket);
     res.json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
@@ -199,6 +203,9 @@ export const updateTicketStatus = async (req: any, res: any) => {
       }));
     await Notification.insertMany(notifications);
     notifications.forEach(n => io.to(String(n.user)).emit('notification', n));
+    const updatedTicket = await Ticket.findById(id);
+    const ticketId = (updatedTicket as any)._id?.toString();
+    io.to(ticketId).emit('ticket-updated', updatedTicket);
     res.json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Status update failed.' });
@@ -336,6 +343,9 @@ export const updateTicket = async (req: any, res: any) => {
         details: update,
       });
     }
+    const updatedTicket2 = await Ticket.findById(id);
+    const ticketId = (updatedTicket2 as any)._id?.toString();
+    io.to(ticketId).emit('ticket-updated', updatedTicket2);
     res.json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Ticket update failed.' });
@@ -403,6 +413,9 @@ export const assignTicket = async (req: any, res: any) => {
       }));
     await Notification.insertMany(notifications);
     notifications.forEach(n => io.to(String(n.user)).emit('notification', n));
+    const updatedTicket3 = await Ticket.findById(id);
+    const ticketId = (updatedTicket3 as any)._id?.toString();
+    io.to(ticketId).emit('ticket-updated', updatedTicket3);
     res.json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Failed to assign ticket.' });
@@ -416,6 +429,10 @@ export const getAnalyticsSummary = async (req: any, res: any) => {
     const total = await Ticket.countDocuments();
     // Çözülen ticket
     const resolved = await Ticket.countDocuments({ status: 'resolved' });
+    // Açık, bekleyen, kapalı ticket sayısı
+    const open = await Ticket.countDocuments({ status: 'open' });
+    const pending = await Ticket.countDocuments({ status: 'in_progress' });
+    const closed = await Ticket.countDocuments({ status: 'closed' });
     // Ortalama çözülme süresi (sadece resolved ticketlar)
     const resolvedTickets = await Ticket.find({ status: 'resolved' }, 'createdAt updatedAt');
     let avgResolution = 0;
@@ -428,18 +445,17 @@ export const getAnalyticsSummary = async (req: any, res: any) => {
       }, 0);
       avgResolution = +(totalHours / resolvedTickets.length).toFixed(2);
     }
-    // Admin başına çözülen ticket sayısı
+    // Tüm adminler için çözülen ticket sayısı
     const pipeline: PipelineStage[] = [
       { $match: { status: 'resolved', assignedTo: { $ne: null } } },
       { $group: { _id: '$assignedTo', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
-      { $limit: 5 },
       { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'admin' } },
       { $unwind: '$admin' },
       { $project: { name: '$admin.username', count: 1 } }
     ];
     const topAdmins = await Ticket.aggregate(pipeline);
-    res.json({ total, resolved, avgResolution, topAdmins });
+    res.json({ total, resolved, avgResolution, topAdmins, open, pending, closed });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch analytics summary.' });
   }
@@ -469,5 +485,110 @@ export const getWeeklyTrend = async (req: any, res: any) => {
     res.json({ trend });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch weekly trend.' });
+  }
+};
+
+export const getCategoryDistribution = async (req: any, res: any) => {
+  try {
+    const categories = await Ticket.aggregate([
+      { $group: { _id: '$category', count: { $sum: 1 } } },
+      { $sort: { count: -1 } }
+    ]);
+    res.json({ categories });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch category distribution.' });
+  }
+};
+
+export const getRecentSatisfactionSurveys = async (req: any, res: any) => {
+  try {
+    const surveys = await Ticket.find({ satisfactionSurvey: { $ne: null } }, {
+      'satisfactionSurvey.rating': 1,
+      'satisfactionSurvey.comment': 1,
+      'satisfactionSurvey.submittedAt': 1,
+      title: 1,
+      _id: 1
+    })
+      .sort({ 'satisfactionSurvey.submittedAt': -1 })
+      .limit(10)
+      .lean();
+    res.json({ surveys });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch recent satisfaction surveys.' });
+  }
+};
+
+export const getRecentLogs = async (req: any, res: any) => {
+  try {
+    const logs = await Log.find({})
+      .sort({ timestamp: -1 })
+      .limit(10)
+      .populate('user', 'username email role')
+      .lean();
+    res.json({ logs });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch recent logs.' });
+  }
+};
+
+// Dashboard Analytics: Ticket Status Trend (last 7 days)
+export const getStatusTrend = async (req: any, res: any) => {
+  try {
+    const today = new Date();
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      days.push({
+        label: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        date: new Date(d.getFullYear(), d.getMonth(), d.getDate())
+      });
+    }
+    const statuses = ['open', 'in_progress', 'resolved', 'closed'];
+    const trend = await Promise.all(days.map(async (day) => {
+      const start = day.date;
+      const end = new Date(day.date);
+      end.setDate(end.getDate() + 1);
+      const counts: any = { day: day.label };
+      for (const status of statuses) {
+        counts[status] = await Ticket.countDocuments({ status, createdAt: { $gte: start, $lt: end } });
+      }
+      return counts;
+    }));
+    res.json({ trend });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch status trend.' });
+  }
+};
+
+// Dashboard Analytics: Top Users by ticket count
+export const getTopUsers = async (req: any, res: any) => {
+  try {
+    const users = await Ticket.aggregate([
+      { $group: { _id: '$user', count: { $sum: 1 }, last: { $max: '$createdAt' } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+      { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+      { $unwind: '$user' },
+      { $project: { username: '$user.username', email: '$user.email', count: 1, last: 1 } }
+    ]);
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch top users.' });
+  }
+};
+
+// Dashboard Analytics: Old open tickets (>7 days)
+export const getOldOpenTickets = async (req: any, res: any) => {
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const tickets = await Ticket.find({ status: 'open', createdAt: { $lt: sevenDaysAgo } }, { title: 1, createdAt: 1, _id: 1, nickname: 1 })
+      .sort({ createdAt: 1 })
+      .limit(10)
+      .lean();
+    res.json({ tickets });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch old open tickets.' });
   }
 }; 

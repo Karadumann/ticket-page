@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { getAllUsers, changeUserPassword, updateUser, deleteUser } from '../controllers/authController';
-import { getAllTickets, updateTicketStatus, deleteTicket, getTicketByIdAdmin, updateTicket, assignTicket, getAnalyticsSummary, getWeeklyTrend } from '../controllers/ticketController';
+import { getAllTickets, updateTicketStatus, deleteTicket, getTicketByIdAdmin, updateTicket, assignTicket, getAnalyticsSummary, getWeeklyTrend, getCategoryDistribution, getRecentSatisfactionSurveys, getRecentLogs, getStatusTrend, getTopUsers, getOldOpenTickets } from '../controllers/ticketController';
 import authMiddleware, { requireAdmin, requireSuperAdmin } from '../middlewares/authMiddleware';
 import { getLogs, deleteAllLogs } from '../controllers/logController';
 import Notification from '../models/Notification';
@@ -67,5 +67,11 @@ router.get('/online-admins', authMiddleware, requireAdmin, async (req, res) => {
 
 router.get('/analytics/summary', authMiddleware, requireAdmin, getAnalyticsSummary);
 router.get('/analytics/weekly-trend', authMiddleware, requireAdmin, getWeeklyTrend);
+router.get('/analytics/category-distribution', authMiddleware, requireAdmin, getCategoryDistribution);
+router.get('/analytics/recent-surveys', authMiddleware, requireAdmin, getRecentSatisfactionSurveys);
+router.get('/analytics/recent-logs', authMiddleware, requireAdmin, getRecentLogs);
+router.get('/analytics/status-trend', authMiddleware, requireAdmin, getStatusTrend);
+router.get('/analytics/top-users', authMiddleware, requireAdmin, getTopUsers);
+router.get('/analytics/old-open-tickets', authMiddleware, requireAdmin, getOldOpenTickets);
 
 export default router; 

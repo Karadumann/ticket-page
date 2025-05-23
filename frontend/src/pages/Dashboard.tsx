@@ -13,6 +13,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
+import { PieChart, Pie, Cell } from 'recharts';
+import { LineChart as MultiLineChart, Line as MultiLine, XAxis as MultiXAxis, YAxis as MultiYAxis } from 'recharts';
 
 const Dashboard: React.FC = () => {
   const [summary, setSummary] = useState<any>(null);
@@ -20,6 +22,12 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [categoryDist, setCategoryDist] = useState([]);
+  const [recentSurveys, setRecentSurveys] = useState([]);
+  const [recentLogs, setRecentLogs] = useState([]);
+  const [statusTrend, setStatusTrend] = useState([]);
+  const [topUsers, setTopUsers] = useState([]);
+  const [oldOpenTickets, setOldOpenTickets] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,6 +56,27 @@ const Dashboard: React.FC = () => {
       setLoading(false);
     };
     fetchData();
+  }, []);
+
+  useEffect(() => {
+    const fetchExtra = async () => {
+      const token = localStorage.getItem('token');
+      const [catRes, survRes, logRes, statusRes, usersRes, oldOpenRes] = await Promise.all([
+        fetch('/api/admin/analytics/category-distribution', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/analytics/recent-surveys', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/analytics/recent-logs', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/analytics/status-trend', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/analytics/top-users', { headers: { Authorization: `Bearer ${token}` } }),
+        fetch('/api/admin/analytics/old-open-tickets', { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      setCategoryDist((await catRes.json()).categories || []);
+      setRecentSurveys((await survRes.json()).surveys || []);
+      setRecentLogs((await logRes.json()).logs || []);
+      setStatusTrend((await statusRes.json()).trend || []);
+      setTopUsers((await usersRes.json()).users || []);
+      setOldOpenTickets((await oldOpenRes.json()).tickets || []);
+    };
+    fetchExtra();
   }, []);
 
   const handleSectionChange = (section: 'dashboard' | 'users' | 'tickets' | 'logs') => {
@@ -106,7 +135,7 @@ const Dashboard: React.FC = () => {
             <Paper sx={{ p: 3, textAlign: 'center', bgcolor: '#fffde7', boxShadow: 2 }}>
               <AccessTimeIcon sx={{ color: '#fbc02d', fontSize: 32, mb: 1 }} />
               <Typography variant="subtitle2" color="text.secondary">Avg. Resolution Time</Typography>
-              <Typography variant="h5" fontWeight={700}>{summary.avgResolution} hours</Typography>
+              <Typography variant="h5" fontWeight={700}>{summary.avgResolution !== undefined ? summary.avgResolution : '-'} hours</Typography>
             </Paper>
           </Grid>
           <Grid sx={{ width: { xs: '100%', sm: '50%', md: '25%' } }}>
@@ -214,6 +243,106 @@ const Dashboard: React.FC = () => {
             </Paper>
           </Grid>
         </Grid>
+        {/* Category Distribution Pie Chart */}
+        <Paper sx={{ mt: 4, mb: 2, p: 3, bgcolor: '#f7f7fa', borderRadius: 3, boxShadow: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>Ticket Category Distribution</Typography>
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie data={categoryDist} dataKey="count" nameKey="_id" cx="50%" cy="50%" outerRadius={80} label>
+                {categoryDist.map((_, idx) => (
+                  <Cell key={`cell-${idx}`} fill={['#1976d2','#43a047','#fbc02d','#8e24aa','#ff9800','#d84315','#0288d1'][idx % 7]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </Paper>
+        {/* Admin Performance Bar Chart (all admins) */}
+        <Paper sx={{ mt: 4, mb: 2, p: 3, bgcolor: '#f7f7fa', borderRadius: 3, boxShadow: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>All Admins Performance</Typography>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={summary.topAdmins || []} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="count" fill="#1976d2" barSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Paper>
+        {/* Recent Satisfaction Surveys */}
+        <Paper sx={{ mt: 4, mb: 2, p: 3, bgcolor: '#f7f7fa', borderRadius: 3, boxShadow: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>Recent Satisfaction Surveys</Typography>
+          {recentSurveys.length === 0 ? <Typography color="text.secondary">No surveys found.</Typography> : (
+            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+              {recentSurveys.map((s: any) => (
+                <li key={s._id} style={{ marginBottom: 8 }}>
+                  <b>{s.title}</b> — <span style={{ color: '#8e24aa' }}>{s.satisfactionSurvey.rating} / 5</span>
+                  {s.satisfactionSurvey.comment && <span style={{ color: '#555', marginLeft: 8 }}><i>"{s.satisfactionSurvey.comment}"</i></span>}
+                </li>
+              ))}
+            </Box>
+          )}
+        </Paper>
+        {/* Recent System Logs */}
+        <Paper sx={{ mt: 4, mb: 2, p: 3, bgcolor: '#f7f7fa', borderRadius: 3, boxShadow: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>Recent System Logs</Typography>
+          {recentLogs.length === 0 ? <Typography color="text.secondary">No logs found.</Typography> : (
+            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+              {recentLogs.map((l: any) => (
+                <li key={l._id} style={{ marginBottom: 8 }}>
+                  <b>{l.action.replace(/_/g, ' ').toUpperCase()}</b> by <span style={{ color: '#1976d2' }}>{l.user?.username}</span> ({l.user?.role})
+                  <span style={{ color: '#888', marginLeft: 8 }}>{new Date(l.timestamp || l.createdAt).toLocaleString()}</span>
+                </li>
+              ))}
+            </Box>
+          )}
+        </Paper>
+        {/* Ticket Status Trend (multi-line chart) */}
+        <Paper sx={{ mt: 4, mb: 2, p: 3, bgcolor: '#f7f7fa', borderRadius: 3, boxShadow: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>Ticket Status Trend (Last 7 Days)</Typography>
+          <ResponsiveContainer width="100%" height={250}>
+            <MultiLineChart data={statusTrend} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <MultiXAxis dataKey="day" />
+              <MultiYAxis />
+              <Tooltip />
+              <Legend />
+              <MultiLine type="monotone" dataKey="open" stroke="#1976d2" strokeWidth={2} name="Open" />
+              <MultiLine type="monotone" dataKey="in_progress" stroke="#fbc02d" strokeWidth={2} name="Pending" />
+              <MultiLine type="monotone" dataKey="resolved" stroke="#43a047" strokeWidth={2} name="Resolved" />
+              <MultiLine type="monotone" dataKey="closed" stroke="#d84315" strokeWidth={2} name="Closed" />
+            </MultiLineChart>
+          </ResponsiveContainer>
+        </Paper>
+        {/* Top Users */}
+        <Paper sx={{ mt: 4, mb: 2, p: 3, bgcolor: '#f7f7fa', borderRadius: 3, boxShadow: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>Top Users (Most Tickets)</Typography>
+          {topUsers.length === 0 ? <Typography color="text.secondary">No users found.</Typography> : (
+            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+              {topUsers.map((u: any) => (
+                <li key={u.username} style={{ marginBottom: 8 }}>
+                  <b>{u.username}</b> — <span style={{ color: '#1976d2' }}>{u.count} tickets</span>
+                  <span style={{ color: '#888', marginLeft: 8 }}>Last: {new Date(u.last).toLocaleString()}</span>
+                </li>
+              ))}
+            </Box>
+          )}
+        </Paper>
+        {/* Old Open Tickets */}
+        <Paper sx={{ mt: 4, mb: 2, p: 3, bgcolor: '#f7f7fa', borderRadius: 3, boxShadow: 2 }}>
+          <Typography variant="subtitle1" fontWeight={700} mb={2}>Old Open Tickets (&gt;7 days)</Typography>
+          {oldOpenTickets.length === 0 ? <Typography color="text.secondary">No old open tickets.</Typography> : (
+            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+              {oldOpenTickets.map((t: any) => (
+                <li key={t._id} style={{ marginBottom: 8 }}>
+                  <b>{t.title}</b> — <span style={{ color: '#d84315' }}>{t.nickname}</span>
+                  <span style={{ color: '#888', marginLeft: 8 }}>{new Date(t.createdAt).toLocaleDateString()}</span>
+                </li>
+              ))}
+            </Box>
+          )}
+        </Paper>
       </Box>
     </>
   );

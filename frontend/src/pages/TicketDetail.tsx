@@ -67,6 +67,11 @@ const TicketDetail: React.FC = () => {
     (ticket?.assignedTo && (ticket.assignedTo as any)._id) || ticket?.assignedTo || ''
   );
 
+  let canReply = true;
+  if (ticket && ticket.status === 'closed') {
+    canReply = false;
+  }
+
   useEffect(() => {
     let socket: Socket | null = null;
     let userId = '';
@@ -83,25 +88,46 @@ const TicketDetail: React.FC = () => {
         isAdmin = ['admin', 'superadmin', 'staff', 'moderator'].includes(role);
       } catch {}
     }
-    if (isAdmin && id) {
+    if (id) {
       socket = socketIOClient('http://localhost:5000');
       setSocketRef(socket);
-      socket.emit('viewing-ticket', { ticketId: id, userId, username, role });
-      socket.on('viewing-ticket-update', (data: any) => {
-        if (data.ticketId === id) {
-          setViewers(data.viewers.filter((v: any) => v.userId !== userId));
+      socket.emit('join-ticket', { ticketId: id });
+      socket.on('ticket-updated', async (updatedTicket: any) => {
+        if (updatedTicket && updatedTicket._id === id) {
+          setTicket(updatedTicket);
+          // Refetch users for new replies
+          if (updatedTicket && updatedTicket.replies) {
+            const userIds = [updatedTicket.user, ...(updatedTicket.replies?.map((r: any) => r.user) || [])];
+            const uniqueIds = Array.from(new Set(userIds));
+            const userInfos = await Promise.all(uniqueIds.map(async uid => {
+              const res = await fetch(`/api/users/${uid}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+              return res.ok ? await res.json() : { _id: uid, username: uid, role: 'user' };
+            }));
+            setUsers(userInfos);
+          }
         }
       });
-      socket.on('typing-reply-update', (data: any) => {
-        if (data.ticketId === id) {
-          setTypers(data.typers.filter((v: any) => v.userId !== userId));
-        }
-      });
+      if (isAdmin) {
+        socket.emit('viewing-ticket', { ticketId: id, userId, username, role });
+        socket.on('viewing-ticket-update', (data: any) => {
+          if (data.ticketId === id) {
+            setViewers(data.viewers.filter((v: any) => v.userId !== userId));
+          }
+        });
+        socket.on('typing-reply-update', (data: any) => {
+          if (data.ticketId === id) {
+            setTypers(data.typers.filter((v: any) => v.userId !== userId));
+          }
+        });
+      }
     }
     return () => {
-      if (isAdmin && socket && id) {
-        socket.emit('stop-viewing-ticket', { ticketId: id, userId });
-        socket.emit('stop-typing-reply', { ticketId: id, userId });
+      if (socket && id) {
+        socket.emit('leave-ticket', { ticketId: id });
+        if (isAdmin) {
+          socket.emit('stop-viewing-ticket', { ticketId: id, userId });
+          socket.emit('stop-typing-reply', { ticketId: id, userId });
+        }
         socket.disconnect();
       }
     };
@@ -211,25 +237,22 @@ const TicketDetail: React.FC = () => {
   const isTicketOwner = ticket && ticket.user === currentUserId && currentUserRole === 'user';
   const canShowSurveyButton = ticket && ticket.status === 'closed' && !ticket.satisfactionSurvey && isTicketOwner;
 
-  // User cannot reply again until a staff/admin/moderator/superadmin replies
-  let canReply = true;
-  if (ticket && ticket.user === currentUserId && currentUserRole === 'user') {
-    // User's ticket and normal user
-    const userReplies = ticket.replies.filter(r => r.user === currentUserId);
-    const hasAdminReply = ticket.replies.some(r => {
-      const u = users.find(u => u._id === r.user);
-      return u && ['admin', 'superadmin', 'staff', 'moderator'].includes(u.role);
-    });
-    if (userReplies.length >= 1 && !hasAdminReply) {
-      canReply = false;
+  // Determine if another admin is typing
+  const otherAdminTyping = isAdmin && typers.length > 0 && !typers.some(v => v.userId === currentUserId);
+  const typingAdminNames = typers.map(v => {
+    let displayName = v.username;
+    if (!displayName || /^[a-f0-9]{24}$/.test(displayName)) {
+      const userObj = users.find(u => u._id === v.userId);
+      displayName = userObj?.username || 'Unknown';
     }
-  }
+    return displayName;
+  });
 
   if (loading) return <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh"><CircularProgress /></Box>;
   if (error) {
     let displayError = error;
-    if (error === 'Ticket bulunamadı.') displayError = 'Ticket not found.';
-    if (error === 'Sunucu hatası.') displayError = 'Server error.';
+    if (error === 'Ticket not found.') displayError = 'Ticket not found.';
+    if (error === 'Server error.') displayError = 'Server error.';
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh"><Typography color="error">{displayError}</Typography></Box>;
   }
   if (!ticket) return null;
@@ -249,21 +272,36 @@ const TicketDetail: React.FC = () => {
       {/* Diğer admin/moderator izliyorsa uyarı */}
       {viewers.length > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          {viewers.map((v, i) => (
-            <span key={v.userId}>
-              {v.role} <b>{v.username}</b> viewing this ticket{viewers.length > 1 && i < viewers.length - 1 ? ', ' : ''}
-            </span>
-          ))}
+          {viewers.map((v, i) => {
+            let displayName = v.username;
+            // Fallback: if username is missing or looks like an ObjectId, try to get from users array
+            if (!displayName || /^[a-f0-9]{24}$/.test(displayName)) {
+              const userObj = users.find(u => u._id === v.userId);
+              displayName = userObj?.username || 'Unknown';
+            }
+            return (
+              <span key={v.userId}>
+                {v.role} <b>{displayName}</b> viewing this ticket{viewers.length > 1 && i < viewers.length - 1 ? ', ' : ''}
+              </span>
+            );
+          })}
         </Alert>
       )}
       {/* Diğer admin/moderator reply yazıyorsa uyarı */}
       {typers.length > 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          {typers.map((v, i) => (
-            <span key={v.userId}>
-              {v.role} <b>{v.username}</b> is typing a reply...{typers.length > 1 && i < viewers.length - 1 ? ', ' : ''}
-            </span>
-          ))}
+          {typers.map((v, i) => {
+            let displayName = v.username;
+            if (!displayName || /^[a-f0-9]{24}$/.test(displayName)) {
+              const userObj = users.find(u => u._id === v.userId);
+              displayName = userObj?.username || 'Unknown';
+            }
+            return (
+              <span key={v.userId}>
+                {v.role} <b>{displayName}</b> is typing a reply...{typers.length > 1 && i < viewers.length - 1 ? ', ' : ''}
+              </span>
+            );
+          })}
         </Alert>
       )}
       <Paper elevation={4} sx={{ p: { xs: 1, sm: 2, md: 4 }, borderRadius: 4, mb: 4, bgcolor: 'var(--card)', color: 'var(--foreground)', boxShadow: 6, position: 'relative', width: '100%' }}>
@@ -556,6 +594,13 @@ const TicketDetail: React.FC = () => {
               </Box>
               {/* Reply Form */}
               {replyStatus && <Alert severity={replyStatus.includes('success') ? 'success' : 'error'} sx={{ mb: 2 }}>{replyStatus}</Alert>}
+              {otherAdminTyping && (
+                <Alert severity="error" sx={{ mb: 2 }}>
+                  {typingAdminNames.length === 1
+                    ? `Admin ${typingAdminNames[0]} is currently typing a reply to this ticket.`
+                    : `Admins ${typingAdminNames.join(', ')} are currently typing a reply to this ticket.`}
+                </Alert>
+              )}
               {canReply ? (
                 <form onSubmit={async e => {
                   e.preventDefault();
@@ -610,8 +655,9 @@ const TicketDetail: React.FC = () => {
                     multiline
                     minRows={2}
                     sx={{ fontSize: { xs: 12, md: 16 } }}
+                    disabled={otherAdminTyping}
                   />
-                  <Button type="submit" variant="contained" disabled={!replyMsg.trim()} sx={{ mt: 1, bgcolor: 'var(--primary)', color: 'var(--primary-foreground)', fontWeight: 700, fontSize: { xs: 13, md: 16 }, width: { xs: '100%', sm: 'auto' }, '&:hover': { bgcolor: 'var(--primary-foreground)', color: 'var(--primary)' } }}>
+                  <Button type="submit" variant="contained" disabled={!replyMsg.trim() || otherAdminTyping} sx={{ mt: 1, bgcolor: 'var(--primary)', color: 'var(--primary-foreground)', fontWeight: 700, fontSize: { xs: 13, md: 16 }, width: { xs: '100%', sm: 'auto' }, '&:hover': { bgcolor: 'var(--primary-foreground)', color: 'var(--primary)' } }}>
                     Send Reply
                   </Button>
                 </form>
