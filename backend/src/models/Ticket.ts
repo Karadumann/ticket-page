@@ -24,6 +24,7 @@ export interface ITicket extends Document {
   priority: 'low' | 'medium' | 'high' | 'very_high';
   assignedTo?: mongoose.Types.ObjectId;
   satisfactionSurvey?: ISatisfactionSurvey;
+  labels?: string[];
 }
 
 const ReplySchema = new Schema<IReply>({
@@ -50,6 +51,7 @@ const TicketSchema = new Schema<ITicket>({
   priority: { type: String, enum: ['low', 'medium', 'high', 'very_high'], required: true },
   assignedTo: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   satisfactionSurvey: { type: SatisfactionSurveySchema, default: null },
+  labels: [{ type: String, default: [] }],
 }, { timestamps: true });
 
 TicketSchema.index({ user: 1 });

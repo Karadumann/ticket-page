@@ -20,6 +20,7 @@ interface Ticket {
   user?: string;
   assignedTo?: { username: string };
   satisfactionSurvey?: boolean;
+  labels?: string[];
 }
 
 const Tickets: React.FC = () => {
@@ -396,6 +397,11 @@ const Tickets: React.FC = () => {
                       >
                         {ticket.status.replace('_', ' ')}
                       </Box>
+                    </Box>
+                    <Box display="flex" gap={1} flexWrap="wrap" mt={0.5}>
+                      {Array.isArray(ticket.labels) && ticket.labels.length > 0 && ticket.labels.map((label, idx) => (
+                        <Box key={idx} sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 1.5, py: 0.5, borderRadius: 2, fontSize: 13, fontWeight: 600 }}>{label}</Box>
+                      ))}
                     </Box>
                   </ListItem>
                 </React.Fragment>

@@ -33,6 +33,7 @@ interface Ticket {
     username: string;
     role: string;
   };
+  labels?: string[];
   [key: string]: any;
 }
 
@@ -553,6 +554,52 @@ const TicketDetail: React.FC = () => {
                   <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 15, md: 18 }, minWidth: 100, textAlign: 'left' }}>Title:</Typography>
                   <Typography variant="h5" sx={{ color: 'var(--primary)', fontWeight: 700, wordBreak: 'break-word', whiteSpace: 'pre-line', fontSize: { xs: 16, md: 22 }, textAlign: 'left' }}>{ticket.title}</Typography>
                 </Box>
+                {/* Labels */}
+                {isAdmin ? (
+                  <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} alignItems="center" gap={2} mb={1}>
+                    <TextField
+                      label="Labels (comma separated)"
+                      value={Array.isArray(ticket.labels) ? ticket.labels.join(', ') : ''}
+                      onChange={e => {
+                        const newLabels = e.target.value.split(',').map(l => l.trim()).filter(Boolean);
+                        setTicket(t => t ? { ...t, labels: newLabels } : t);
+                      }}
+                      size="small"
+                      sx={{ minWidth: 220 }}
+                      placeholder="bug, urgent, frontend"
+                      helperText="You can enter multiple labels separated by commas."
+                    />
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      sx={{ fontWeight: 700, height: 40 }}
+                      onClick={async () => {
+                        const res = await fetch(`/api/admin/tickets/${ticket._id}`, {
+                          method: 'PATCH',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                          },
+                          body: JSON.stringify({ labels: ticket.labels })
+                        });
+                        if (res.ok) {
+                          const data = await res.json();
+                          setTicket(data);
+                        }
+                      }}
+                    >
+                      Save Labels
+                    </Button>
+                  </Box>
+                ) : (
+                  Array.isArray(ticket.labels) && ticket.labels.length > 0 && (
+                    <Box display="flex" gap={1} flexWrap="wrap" mb={1}>
+                      {ticket.labels.map((label: string, idx: number) => (
+                        <Box key={idx} sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 1.5, py: 0.5, borderRadius: 2, fontSize: 13, fontWeight: 600 }}>{label}</Box>
+                      ))}
+                    </Box>
+                  )
+                )}
                 {/* Description */}
                 <Box display="flex" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={1.5} mb={1} flexDirection={{ xs: 'column', sm: 'row' }}>
                   <Typography variant="subtitle1" sx={{ color: 'var(--muted-foreground)', fontWeight: 700, fontSize: { xs: 15, md: 18 }, minWidth: 100, textAlign: { xs: 'left', sm: 'right' } }}>Description:</Typography>

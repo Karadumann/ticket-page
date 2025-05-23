@@ -53,6 +53,7 @@ interface Ticket {
   createdAt?: string;
   updatedAt?: string;
   assignedTo?: User | null;
+  labels?: string[];
 }
 
 interface DecodedToken {
@@ -608,6 +609,14 @@ const AdminPanel: React.FC = () => {
               </Typography>
             );
           })()}
+          {/* Labels (chipler) */}
+          {Array.isArray(ticket.labels) && ticket.labels.length > 0 && (
+            <Box display="flex" gap={0.5} flexWrap="wrap" ml={1}>
+              {ticket.labels.map((label: string, idx: number) => (
+                <Box key={idx} sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 1, py: 0.2, borderRadius: 2, fontSize: 11, fontWeight: 600, lineHeight: 1.2 }}>{label}</Box>
+              ))}
+            </Box>
+          )}
         </Box>
         {/* Sağ üstte #id badge'i */}
         <Box position="absolute" top={8} right={8} zIndex={2}>

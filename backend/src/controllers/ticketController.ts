@@ -11,7 +11,7 @@ interface AuthRequest extends ExpressRequest {
 
 export const createTicket = async (req: AuthRequest, res: Response) => {
   try {
-    const { title, description, nickname, screenshotUrls, category, priority } = req.body;
+    const { title, description, nickname, screenshotUrls, category, priority, labels } = req.body;
     const validCategories = ['bug', 'payment', 'account', 'suggestion', 'report_player', 'technical', 'other'];
     const validPriorities = ['low', 'medium', 'high', 'very_high'];
     if (!category || !validCategories.includes(category)) {
@@ -31,6 +31,7 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
       user: req.user.id,
       category,
       priority,
+      labels: Array.isArray(labels) ? labels.filter((l: string) => !!l) : [],
     });
     await ticket.save();
     io.emit('new-ticket', ticket);
@@ -52,7 +53,7 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
         action: 'create_ticket',
         targetType: 'ticket',
         targetId: ticket._id,
-        details: { title, description, nickname, category, priority },
+        details: { title, description, nickname, category, priority, labels: Array.isArray(labels) ? labels.filter((l: string) => !!l) : [] },
       });
     }
     const ticketId = (ticket as any)._id?.toString();
@@ -285,7 +286,7 @@ export const getTicketByIdAdmin = async (req: AuthRequest, res: Response) => {
 export const updateTicket = async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const { title, description, category, priority, nickname, screenshotUrls, status } = req.body;
+    const { title, description, category, priority, nickname, screenshotUrls, status, labels } = req.body;
     const update: any = {};
     if (title) {
       if (typeof title !== 'string' || title.length < 3 || title.length > 100) {
@@ -331,6 +332,12 @@ export const updateTicket = async (req: any, res: any) => {
         return res.status(400).json({ message: 'Invalid status.' });
       }
       update.status = status;
+    }
+    if (labels) {
+      if (!Array.isArray(labels) || labels.some((l: any) => typeof l !== 'string')) {
+        return res.status(400).json({ message: 'Labels must be an array of strings.' });
+      }
+      update.labels = labels.filter((l: string) => !!l);
     }
     const ticket = await Ticket.findByIdAndUpdate(id, update, { new: true });
     if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
