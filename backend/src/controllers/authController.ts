@@ -8,13 +8,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, avatar } = req.body;
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
       return res.status(400).json({ message: 'Username or email already exists.' });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ username, email, password: hashedPassword });
+    const user = new User({ username, email, password: hashedPassword, avatar });
     await user.save();
     res.status(201).json({ message: 'Registration successful.' });
   } catch (err) {
@@ -73,7 +73,7 @@ export const changeUserPassword = async (req: any, res: any) => {
 export const updateUser = async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const { username, email, role } = req.body;
+    const { username, email, role, avatar } = req.body;
     if (role && req.user.role !== 'superadmin') {
       return res.status(403).json({ message: 'Only superadmin can change user roles.' });
     }
@@ -81,6 +81,7 @@ export const updateUser = async (req: any, res: any) => {
     if (username) update.username = username;
     if (email) update.email = email;
     if (role) update.role = role;
+    if (avatar !== undefined) update.avatar = avatar;
     const user = await User.findByIdAndUpdate(id, update, { new: true, select: '-password' });
     if (!user) return res.status(404).json({ message: 'User not found.' });
     await Log.create({

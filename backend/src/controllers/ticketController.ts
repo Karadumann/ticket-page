@@ -172,7 +172,7 @@ export const getAllTickets = async (req: any, res: any) => {
     }
 
     const [tickets, total] = await Promise.all([
-      Ticket.find(filter).skip(skip).limit(limit).populate('assignedTo', 'username role'),
+      Ticket.find(filter).skip(skip).limit(limit).populate('assignedTo', 'username role avatar'),
       Ticket.countDocuments(filter)
     ]);
     res.json({ tickets, total });
@@ -273,7 +273,7 @@ export const getTicketById = async (req: AuthRequest, res: Response) => {
 
 export const getTicketByIdAdmin = async (req: AuthRequest, res: Response) => {
   try {
-    const ticket = await Ticket.findById(req.params.id).populate('assignedTo', 'username role');
+    const ticket = await Ticket.findById(req.params.id).populate('assignedTo', 'username role avatar');
     if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
     if (req.user) {
       await Log.create({
@@ -405,14 +405,14 @@ export const assignTicket = async (req: any, res: any) => {
     if (!user || !['admin', 'superadmin', 'moderator', 'staff'].includes(user.role)) {
       return res.status(400).json({ message: 'Assigned user must be an admin, moderator, staff, or superadmin.' });
     }
-    const ticket = await Ticket.findByIdAndUpdate(id, { assignedTo: user._id }, { new: true }).populate('assignedTo', 'username email role');
-    if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
+    const updatedTicket = await Ticket.findByIdAndUpdate(id, { assignedTo: user._id }, { new: true }).populate('assignedTo', 'username email role avatar');
+    if (!updatedTicket) return res.status(404).json({ message: 'Ticket not found.' });
     // Notify assigned user
     const notif = await Notification.create({
       user: user._id,
-      message: `A ticket has been assigned to you: ${ticket.title}`,
+      message: `A ticket has been assigned to you: ${updatedTicket.title}`,
       type: 'ticket_assigned',
-      link: `/tickets/${ticket._id}`
+      link: `/tickets/${updatedTicket._id}`
     });
     io.to(String(user._id)).emit('notification', notif);
     // Notify all admins
@@ -421,16 +421,16 @@ export const assignTicket = async (req: any, res: any) => {
       .filter(admin => String(admin._id) !== String(user._id))
       .map(admin => ({
         user: admin._id,
-        message: `A ticket was assigned to ${user.username}: ${ticket.title}`,
+        message: `A ticket was assigned to ${user.username}: ${updatedTicket.title}`,
         type: 'ticket_assigned',
-        link: `/tickets/${ticket._id}`
+        link: `/tickets/${updatedTicket._id}`
       }));
     await Notification.insertMany(notifications);
     notifications.forEach(n => io.to(String(n.user)).emit('notification', n));
     const updatedTicket3 = await Ticket.findById(id);
     const ticketId = (updatedTicket3 as any)._id?.toString();
     io.to(ticketId).emit('ticket-updated', updatedTicket3);
-    res.json(ticket);
+    res.json(updatedTicket);
   } catch (err) {
     res.status(500).json({ message: 'Failed to assign ticket.' });
   }

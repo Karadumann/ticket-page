@@ -6,6 +6,7 @@ const Register: React.FC = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [avatar, setAvatar] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ const Register: React.FC = () => {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
+        body: JSON.stringify({ username, email, password, avatar })
       });
       const data = await res.json();
       if (!res.ok) {
@@ -66,6 +67,14 @@ const Register: React.FC = () => {
             fullWidth
             required
             margin="normal"
+          />
+          <TextField
+            label="Avatar URL (optional)"
+            value={avatar}
+            onChange={e => setAvatar(e.target.value)}
+            fullWidth
+            margin="normal"
+            placeholder="https://..."
           />
           <Button
             type="submit"

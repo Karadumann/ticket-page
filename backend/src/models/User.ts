@@ -5,6 +5,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: 'user' | 'admin' | 'superadmin' | 'staff' | 'moderator';
+  avatar?: string;
 }
 
 const UserSchema: Schema = new Schema({
@@ -12,6 +13,7 @@ const UserSchema: Schema = new Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['user', 'admin', 'superadmin', 'staff', 'moderator'], default: 'user' },
+  avatar: { type: String },
 }, { timestamps: true });
 
 UserSchema.index({ role: 1 });

@@ -33,12 +33,14 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import Drawer from '@mui/material/Drawer';
 import AdminChat from '../components/AdminChat';
 import Autocomplete from '@mui/material/Autocomplete';
+import Avatar from '@mui/material/Avatar';
 
 interface User {
   _id: string;
   username: string;
   email: string;
   role: 'user' | 'admin' | 'superadmin' | 'staff' | 'moderator';
+  avatar?: string;
 }
 
 interface Ticket {
@@ -74,99 +76,122 @@ interface AdminHeaderProps {
   onSectionChange: (section: 'dashboard' | 'users' | 'tickets' | 'logs') => void;
   isSuperAdmin?: boolean;
 }
-export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeSection, onSectionChange, isSuperAdmin }) => (
-  <Box
-    component="header"
-    sx={{
-      width: '100vw',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      zIndex: 1300,
-      bgcolor: 'var(--sidebar)',
-      color: 'var(--sidebar-foreground)',
-      boxShadow: 2,
-      display: 'flex',
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      px: { xs: 1, sm: 2, md: 4, xl: 8 },
-      py: { xs: 1, md: 2 },
-      minHeight: { xs: 56, md: 72 },
-      gap: 2,
-    }}
-  >
-    <Typography variant="h6" fontWeight={700} color="var(--primary)" sx={{ fontSize: { xs: 18, md: 24, xl: 28 } }}>Admin Menu</Typography>
-    <Box display="flex" gap={2}>
-      <Button
-        variant={activeSection === 'dashboard' ? 'contained' : 'text'}
-        sx={{
-          bgcolor: activeSection === 'dashboard' ? 'var(--primary)' : 'transparent',
-          color: activeSection === 'dashboard' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-          fontWeight: 700,
-          borderRadius: '9999px',
-          fontSize: { xs: 14, md: 18 },
-          px: { xs: 2, md: 4 },
-          boxShadow: activeSection === 'dashboard' ? '0 2px 12px 0 var(--primary)' : 'none',
-          '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-        }}
-        onClick={() => onSectionChange('dashboard')}
-      >
-        Dashboard
-      </Button>
-      <Button
-        variant={activeSection === 'users' ? 'contained' : 'text'}
-        sx={{
-          bgcolor: activeSection === 'users' ? 'var(--primary)' : 'transparent',
-          color: activeSection === 'users' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-          fontWeight: 700,
-          borderRadius: '9999px',
-          fontSize: { xs: 14, md: 18 },
-          px: { xs: 2, md: 4 },
-          boxShadow: activeSection === 'users' ? '0 2px 12px 0 var(--primary)' : 'none',
-          '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-        }}
-        onClick={() => onSectionChange('users')}
-      >
-        Users
-      </Button>
-      <Button
-        variant={activeSection === 'tickets' ? 'contained' : 'text'}
-        sx={{
-          bgcolor: activeSection === 'tickets' ? 'var(--primary)' : 'transparent',
-          color: activeSection === 'tickets' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-          fontWeight: 700,
-          borderRadius: '9999px',
-          fontSize: { xs: 14, md: 18 },
-          px: { xs: 2, md: 4 },
-          boxShadow: activeSection === 'tickets' ? '0 2px 12px 0 var(--primary)' : 'none',
-          '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-        }}
-        onClick={() => onSectionChange('tickets')}
-      >
-        Tickets
-      </Button>
-      {isSuperAdmin && (
+export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeSection, onSectionChange, isSuperAdmin }) => {
+  const navigate = useNavigate();
+  const [adminInfo, setAdminInfo] = useState<{ username: string; avatar: string }>({ username: '', avatar: '' });
+  useEffect(() => {
+    const fetchMe = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (res.ok) setAdminInfo({ username: data.username || data.email || 'Admin', avatar: data.avatar || '' });
+      } catch {}
+    };
+    fetchMe();
+  }, []);
+  return (
+    <Box
+      component="header"
+      sx={{
+        width: '100vw',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 1300,
+        bgcolor: 'var(--sidebar)',
+        color: 'var(--sidebar-foreground)',
+        boxShadow: 2,
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        px: { xs: 1, sm: 2, md: 4, xl: 8 },
+        py: { xs: 1, md: 2 },
+        minHeight: { xs: 56, md: 72 },
+        gap: 2,
+      }}
+    >
+      <Typography variant="h6" fontWeight={700} color="var(--primary)" sx={{ fontSize: { xs: 18, md: 24, xl: 28 } }}>Admin Menu</Typography>
+      <Box display="flex" gap={2} alignItems="center">
         <Button
-          variant={activeSection === 'logs' ? 'contained' : 'text'}
+          variant={activeSection === 'dashboard' ? 'contained' : 'text'}
           sx={{
-            bgcolor: activeSection === 'logs' ? 'var(--primary)' : 'transparent',
-            color: activeSection === 'logs' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+            bgcolor: activeSection === 'dashboard' ? 'var(--primary)' : 'transparent',
+            color: activeSection === 'dashboard' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
             fontWeight: 700,
             borderRadius: '9999px',
             fontSize: { xs: 14, md: 18 },
             px: { xs: 2, md: 4 },
-            boxShadow: activeSection === 'logs' ? '0 2px 12px 0 var(--primary)' : 'none',
+            boxShadow: activeSection === 'dashboard' ? '0 2px 12px 0 var(--primary)' : 'none',
             '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
           }}
-          onClick={() => onSectionChange('logs')}
+          onClick={() => onSectionChange('dashboard')}
         >
-          Logs
+          Dashboard
         </Button>
-      )}
+        <Button
+          variant={activeSection === 'users' ? 'contained' : 'text'}
+          sx={{
+            bgcolor: activeSection === 'users' ? 'var(--primary)' : 'transparent',
+            color: activeSection === 'users' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+            fontWeight: 700,
+            borderRadius: '9999px',
+            fontSize: { xs: 14, md: 18 },
+            px: { xs: 2, md: 4 },
+            boxShadow: activeSection === 'users' ? '0 2px 12px 0 var(--primary)' : 'none',
+            '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
+          }}
+          onClick={() => onSectionChange('users')}
+        >
+          Users
+        </Button>
+        <Button
+          variant={activeSection === 'tickets' ? 'contained' : 'text'}
+          sx={{
+            bgcolor: activeSection === 'tickets' ? 'var(--primary)' : 'transparent',
+            color: activeSection === 'tickets' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+            fontWeight: 700,
+            borderRadius: '9999px',
+            fontSize: { xs: 14, md: 18 },
+            px: { xs: 2, md: 4 },
+            boxShadow: activeSection === 'tickets' ? '0 2px 12px 0 var(--primary)' : 'none',
+            '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
+          }}
+          onClick={() => onSectionChange('tickets')}
+        >
+          Tickets
+        </Button>
+        {isSuperAdmin && (
+          <Button
+            variant={activeSection === 'logs' ? 'contained' : 'text'}
+            sx={{
+              bgcolor: activeSection === 'logs' ? 'var(--primary)' : 'transparent',
+              color: activeSection === 'logs' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
+              fontWeight: 700,
+              borderRadius: '9999px',
+              fontSize: { xs: 14, md: 18 },
+              px: { xs: 2, md: 4 },
+              boxShadow: activeSection === 'logs' ? '0 2px 12px 0 var(--primary)' : 'none',
+              '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
+            }}
+            onClick={() => onSectionChange('logs')}
+          >
+            Logs
+          </Button>
+        )}
+        {/* Avatar ve Profile butonu */}
+        <Button onClick={() => navigate('/profile')} sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, bgcolor: 'transparent', color: 'var(--primary)', fontWeight: 700, px: 1.5, py: 0.5, borderRadius: 2, '&:hover': { bgcolor: '#e3f2fd' } }}>
+          <Avatar src={adminInfo.avatar} sx={{ width: 32, height: 32, bgcolor: '#1976d2', fontSize: 18 }}>
+            {(!adminInfo.avatar) ? adminInfo.username?.[0]?.toUpperCase() : ''}
+          </Avatar>
+          <span style={{ fontSize: 15 }}>{adminInfo.username}</span>
+        </Button>
+      </Box>
     </Box>
-  </Box>
-);
+  );
+};
 
 const AdminPanel: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -635,13 +660,16 @@ const AdminPanel: React.FC = () => {
           <Typography variant="h6" sx={{ color: 'var(--primary)', fontWeight: 700, fontSize: { xs: 15, md: 18 }, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: { xs: 180, md: 350 } }}>{ticket.title}</Typography>
           <Typography variant="caption" sx={{ color: '#bdbdbd', fontWeight: 700, fontSize: { xs: 12, md: 14 }, borderRadius: 2, px: 1.5, py: 0.5, ml: 2, textTransform: 'capitalize', mt: 2 }}>{columns.find(c => c.key === colKey)?.label}</Typography>
         </Box>
-        <Box display="flex" gap={2} mb={1} flexWrap="wrap" alignItems="center">
-          {ticket.assignedTo && (
+        {ticket.assignedTo && (
+          <Box display="flex" alignItems="center" gap={1}>
+            <Avatar src={ticket.assignedTo.avatar} sx={{ width: 28, height: 28, bgcolor: '#3fa7ff', fontSize: 15 }}>
+              {(!ticket.assignedTo.avatar) ? ticket.assignedTo.username[0]?.toUpperCase() : ''}
+            </Avatar>
             <Typography variant="body2" sx={{ color: '#fff', fontWeight: 600, fontSize: { xs: 12, md: 14 }, px: 1, py: 0.5, borderRadius: 1, bgcolor: '#3fa7ff' }}>
               <b>Assigned:</b> {ticket.assignedTo.username}
             </Typography>
-          )}
-        </Box>
+          </Box>
+        )}
         <Typography
           variant="body2"
           sx={{
@@ -776,6 +804,39 @@ const AdminPanel: React.FC = () => {
       else setActiveSection('tickets');
     }
   }, [location.pathname]);
+
+  // Profil güncelleme sonrası ticket listesini güncellemek için fonksiyon
+  const refreshTickets = async () => {
+    try {
+      const params = new URLSearchParams();
+      params.append('page', ticketPage.toString());
+      params.append('limit', TICKETS_PER_PAGE.toString());
+      if (categoryFilter) params.append('category', categoryFilter);
+      if (priorityFilter) params.append('priority', priorityFilter);
+      if (statusFilter) params.append('status', statusFilter);
+      if (searchTicket) params.append('search', searchTicket);
+      if (fromDate) params.append('from', fromDate.toISOString());
+      if (toDate) params.append('to', toDate.toISOString());
+      if (labelFilter.length > 0) labelFilter.forEach(l => params.append('labels', l));
+      if (assignedToFilter) params.append('assignedTo', assignedToFilter);
+      const ticketsRes = await fetch(`/api/admin/tickets?${params.toString()}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
+      const ticketsData = await ticketsRes.json();
+      if (ticketsRes.ok) {
+        setTickets(ticketsData.tickets);
+        setTotalTickets(ticketsData.total);
+      }
+    } catch {}
+  };
+
+  // Profile sayfasından dönerken ticket listesini güncelle
+  useEffect(() => {
+    const unlisten = location.listen?.(() => {
+      if (location.pathname.startsWith('/admin') && activeSection === 'tickets') {
+        refreshTickets();
+      }
+    });
+    return () => { if (unlisten) unlisten(); };
+  }, [location, activeSection]);
 
   if (!isAdmin) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh"><Alert severity="error">Unauthorized. Only admins can access this page.</Alert></Box>;
@@ -925,6 +986,9 @@ const AdminPanel: React.FC = () => {
                         )}
                         sx={{ flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, py: { xs: 1, md: 2 } }}
                       >
+                        <Avatar src={user.avatar} sx={{ width: 36, height: 36, mr: 2, bgcolor: '#1976d2' }}>
+                          {(!user.avatar) ? user.username[0]?.toUpperCase() : ''}
+                        </Avatar>
                         <ListItemText primary={<span style={{ fontSize: 16 }}>{user.username} ({user.email})</span>} secondary={<span style={{ fontSize: 13 }}>Role: {user.role}</span>} />
                       </ListItem>
                       <Divider />
