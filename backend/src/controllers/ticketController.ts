@@ -163,6 +163,13 @@ export const getAllTickets = async (req: any, res: any) => {
         { description: { $regex: req.query.search, $options: 'i' } }
       ];
     }
+    if (req.query.assignedTo) {
+      filter.assignedTo = req.query.assignedTo;
+    }
+    if (req.query.labels) {
+      const labels = Array.isArray(req.query.labels) ? req.query.labels : [req.query.labels];
+      filter.labels = { $all: labels };
+    }
 
     const [tickets, total] = await Promise.all([
       Ticket.find(filter).skip(skip).limit(limit).populate('assignedTo', 'username role'),

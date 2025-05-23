@@ -32,6 +32,7 @@ import OpenWithIcon from '@mui/icons-material/OpenWith';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import Drawer from '@mui/material/Drawer';
 import AdminChat from '../components/AdminChat';
+import Autocomplete from '@mui/material/Autocomplete';
 
 interface User {
   _id: string;
@@ -220,6 +221,8 @@ const AdminPanel: React.FC = () => {
     return 'dashboard';
   });
   let userId = '';
+  const [labelFilter, setLabelFilter] = useState<string[]>([]);
+  const [assignedToFilter, setAssignedToFilter] = useState<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -481,6 +484,8 @@ const AdminPanel: React.FC = () => {
         if (searchTicket) params.append('search', searchTicket);
         if (fromDate) params.append('from', fromDate.toISOString());
         if (toDate) params.append('to', toDate.toISOString());
+        if (labelFilter.length > 0) labelFilter.forEach(l => params.append('labels', l));
+        if (assignedToFilter) params.append('assignedTo', assignedToFilter);
         const ticketsRes = await fetch(`/api/admin/tickets?${params.toString()}`, { headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` } });
         const ticketsData = await ticketsRes.json();
         if (!ticketsRes.ok) setError(ticketsData.message || 'Failed to fetch tickets.');
@@ -493,7 +498,7 @@ const AdminPanel: React.FC = () => {
       }
     };
     fetchTickets();
-  }, [isAdmin, ticketPage, categoryFilter, priorityFilter, statusFilter, searchTicket, fromDate, toDate]);
+  }, [isAdmin, ticketPage, categoryFilter, priorityFilter, statusFilter, searchTicket, fromDate, toDate, labelFilter, assignedToFilter]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -983,6 +988,27 @@ const AdminPanel: React.FC = () => {
                   <MenuItem value="in_progress">In Progress</MenuItem>
                   <MenuItem value="resolved">Resolved</MenuItem>
                   <MenuItem value="closed">Closed</MenuItem>
+                </TextField>
+                <Autocomplete
+                  multiple
+                  options={Array.from(new Set(tickets.flatMap(t => t.labels || [])))}
+                  value={labelFilter}
+                  onChange={(_, v) => setLabelFilter(v)}
+                  renderInput={params => <TextField {...params} label="Label Filter" sx={{ minWidth: 160 }} />}
+                  size="small"
+                  sx={{ minWidth: 160 }}
+                />
+                <TextField
+                  select
+                  label="Assigned Admin"
+                  value={assignedToFilter}
+                  onChange={e => setAssignedToFilter(e.target.value)}
+                  sx={{ minWidth: 160 }}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  {admins.map(a => (
+                    <MenuItem key={a._id} value={a._id}>{a.username}</MenuItem>
+                  ))}
                 </TextField>
                 <DatePicker
                   label="From Date"
