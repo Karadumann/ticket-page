@@ -34,6 +34,7 @@ import Drawer from '@mui/material/Drawer';
 import AdminChat from '../components/AdminChat';
 import Autocomplete from '@mui/material/Autocomplete';
 import Avatar from '@mui/material/Avatar';
+import Header from '../components/Header';
 
 interface User {
   _id: string;
@@ -68,129 +69,6 @@ interface DecodedToken {
 const getUsername = (userId: string, users: User[] = []) => {
   const user = users.find(u => u._id === userId);
   return user ? user.username : userId;
-};
-
-// Ortak Admin Header
-interface AdminHeaderProps {
-  activeSection: 'dashboard' | 'users' | 'tickets' | 'logs';
-  onSectionChange: (section: 'dashboard' | 'users' | 'tickets' | 'logs') => void;
-  isSuperAdmin?: boolean;
-}
-export const AdminHeader: React.FC<AdminHeaderProps> = ({ activeSection, onSectionChange, isSuperAdmin }) => {
-  const navigate = useNavigate();
-  const [adminInfo, setAdminInfo] = useState<{ username: string; avatar: string }>({ username: '', avatar: '' });
-  useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const res = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-        const data = await res.json();
-        if (res.ok) setAdminInfo({ username: data.username || data.email || 'Admin', avatar: data.avatar || '' });
-      } catch {}
-    };
-    fetchMe();
-  }, []);
-  return (
-    <Box
-      component="header"
-      sx={{
-        width: '100vw',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 1300,
-        bgcolor: 'var(--sidebar)',
-        color: 'var(--sidebar-foreground)',
-        boxShadow: 2,
-        display: 'flex',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        px: { xs: 1, sm: 2, md: 4, xl: 8 },
-        py: { xs: 1, md: 2 },
-        minHeight: { xs: 56, md: 72 },
-        gap: 2,
-      }}
-    >
-      <Typography variant="h6" fontWeight={700} color="var(--primary)" sx={{ fontSize: { xs: 18, md: 24, xl: 28 } }}>Admin Menu</Typography>
-      <Box display="flex" gap={2} alignItems="center">
-        <Button
-          variant={activeSection === 'dashboard' ? 'contained' : 'text'}
-          sx={{
-            bgcolor: activeSection === 'dashboard' ? 'var(--primary)' : 'transparent',
-            color: activeSection === 'dashboard' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-            fontWeight: 700,
-            borderRadius: '9999px',
-            fontSize: { xs: 14, md: 18 },
-            px: { xs: 2, md: 4 },
-            boxShadow: activeSection === 'dashboard' ? '0 2px 12px 0 var(--primary)' : 'none',
-            '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-          }}
-          onClick={() => onSectionChange('dashboard')}
-        >
-          Dashboard
-        </Button>
-        <Button
-          variant={activeSection === 'users' ? 'contained' : 'text'}
-          sx={{
-            bgcolor: activeSection === 'users' ? 'var(--primary)' : 'transparent',
-            color: activeSection === 'users' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-            fontWeight: 700,
-            borderRadius: '9999px',
-            fontSize: { xs: 14, md: 18 },
-            px: { xs: 2, md: 4 },
-            boxShadow: activeSection === 'users' ? '0 2px 12px 0 var(--primary)' : 'none',
-            '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-          }}
-          onClick={() => onSectionChange('users')}
-        >
-          Users
-        </Button>
-        <Button
-          variant={activeSection === 'tickets' ? 'contained' : 'text'}
-          sx={{
-            bgcolor: activeSection === 'tickets' ? 'var(--primary)' : 'transparent',
-            color: activeSection === 'tickets' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-            fontWeight: 700,
-            borderRadius: '9999px',
-            fontSize: { xs: 14, md: 18 },
-            px: { xs: 2, md: 4 },
-            boxShadow: activeSection === 'tickets' ? '0 2px 12px 0 var(--primary)' : 'none',
-            '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-          }}
-          onClick={() => onSectionChange('tickets')}
-        >
-          Tickets
-        </Button>
-        {isSuperAdmin && (
-          <Button
-            variant={activeSection === 'logs' ? 'contained' : 'text'}
-            sx={{
-              bgcolor: activeSection === 'logs' ? 'var(--primary)' : 'transparent',
-              color: activeSection === 'logs' ? 'var(--primary-foreground)' : 'var(--sidebar-foreground)',
-              fontWeight: 700,
-              borderRadius: '9999px',
-              fontSize: { xs: 14, md: 18 },
-              px: { xs: 2, md: 4 },
-              boxShadow: activeSection === 'logs' ? '0 2px 12px 0 var(--primary)' : 'none',
-              '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
-            }}
-            onClick={() => onSectionChange('logs')}
-          >
-            Logs
-          </Button>
-        )}
-        {/* Avatar ve Profile butonu */}
-        <Button onClick={() => navigate('/profile')} sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2, bgcolor: 'transparent', color: 'var(--primary)', fontWeight: 700, px: 1.5, py: 0.5, borderRadius: 2, '&:hover': { bgcolor: '#e3f2fd' } }}>
-          <Avatar src={adminInfo.avatar} sx={{ width: 32, height: 32, bgcolor: '#1976d2', fontSize: 18 }}>
-            {(!adminInfo.avatar) ? adminInfo.username?.[0]?.toUpperCase() : ''}
-          </Avatar>
-          <span style={{ fontSize: 15 }}>{adminInfo.username}</span>
-        </Button>
-      </Box>
-    </Box>
-  );
 };
 
 const AdminPanel: React.FC = () => {
@@ -566,10 +444,9 @@ const AdminPanel: React.FC = () => {
       <div
         ref={setNodeRef}
         style={{
-          transform: CSS.Transform.toString(transform),
-          transition,
-          userSelect: 'none',
-          margin: '0 0 8px 0',
+          width: '100%',
+          maxWidth: 380,
+          margin: '0 auto 8px auto',
           padding: 16,
           borderRadius: 8,
           background: isDragging ? '#e3f2fd' : '#fff',
@@ -577,6 +454,9 @@ const AdminPanel: React.FC = () => {
           opacity: isDragging ? 0.8 : 1,
           cursor: 'pointer',
           position: 'relative',
+          userSelect: 'none',
+          transform: CSS.Transform.toString(transform),
+          transition,
         }}
         onClick={handleClick}
       >
@@ -768,6 +648,8 @@ const AdminPanel: React.FC = () => {
         style={{
           minHeight: 200,
           flex: 1,
+          minWidth: { xs: 260, xl: 340 },
+          maxWidth: { xs: 320, xl: 400 },
           background: isOver ? '#e3f2fd' : '#f7fafc',
           margin: 8,
           borderRadius: 8,
@@ -796,14 +678,11 @@ const AdminPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    if (location.pathname.startsWith('/dashboard') || location.pathname === '/') setActiveSection('dashboard');
-    else if (location.pathname.startsWith('/admin')) {
-      // /admin/users, /admin/tickets, /admin/logs gibi route'lar için
-      if (location.pathname.includes('users')) setActiveSection('users');
-      else if (location.pathname.includes('logs')) setActiveSection('logs');
-      else setActiveSection('tickets');
+    if (location.pathname.startsWith('/admin') && activeSection === 'tickets') {
+      refreshTickets();
     }
-  }, [location.pathname]);
+    // eslint-disable-next-line
+  }, [location.pathname, activeSection]);
 
   // Profil güncelleme sonrası ticket listesini güncellemek için fonksiyon
   const refreshTickets = async () => {
@@ -827,16 +706,6 @@ const AdminPanel: React.FC = () => {
       }
     } catch {}
   };
-
-  // Profile sayfasından dönerken ticket listesini güncelle
-  useEffect(() => {
-    const unlisten = location.listen?.(() => {
-      if (location.pathname.startsWith('/admin') && activeSection === 'tickets') {
-        refreshTickets();
-      }
-    });
-    return () => { if (unlisten) unlisten(); };
-  }, [location, activeSection]);
 
   if (!isAdmin) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh"><Alert severity="error">Unauthorized. Only admins can access this page.</Alert></Box>;
@@ -871,7 +740,7 @@ const AdminPanel: React.FC = () => {
           <Box sx={{ pt: 8 }} />
         </>
       ) : (
-        <AdminHeader activeSection={activeSection} onSectionChange={handleSectionChange} isSuperAdmin={isSuperAdmin} />
+        <Header activeSection={activeSection} onSectionChange={handleSectionChange} isSuperAdmin={isSuperAdmin} />
       )}
       {/* Main Content */}
       <Box
@@ -1010,13 +879,14 @@ const AdminPanel: React.FC = () => {
             </Typography>
             <Paper elevation={4} sx={{ p: { xs: 1, md: 5 }, borderRadius: 4, width: { xs: '99%', sm: '98%', md: '95%' }, mx: 'auto', bgcolor: 'var(--sidebar)', color: 'var(--sidebar-foreground)', boxShadow: 6 }}>
               <Typography variant="h6" sx={{ color: 'var(--primary)', mb: 2, fontSize: { xs: 18, md: 22 } }}>Tickets</Typography>
-              <Box display="flex" gap={2} flexDirection={{ xs: 'column', sm: 'row' }} mb={3}>
+              <Box mb={1} display="flex" gap={2} flexWrap="wrap">
                 <TextField
                   select
                   label="Category Filter"
                   value={categoryFilter}
                   onChange={e => setCategoryFilter(e.target.value)}
-                  sx={{ minWidth: 160 }}
+                  size="small"
+                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
                 >
                   <MenuItem value="">All</MenuItem>
                   <MenuItem value="bug">Bug</MenuItem>
@@ -1032,7 +902,8 @@ const AdminPanel: React.FC = () => {
                   label="Priority Filter"
                   value={priorityFilter}
                   onChange={e => setPriorityFilter(e.target.value)}
-                  sx={{ minWidth: 160 }}
+                  size="small"
+                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
                 >
                   <MenuItem value="">All</MenuItem>
                   <MenuItem value="low">Low</MenuItem>
@@ -1045,7 +916,8 @@ const AdminPanel: React.FC = () => {
                   label="Status Filter"
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}
-                  sx={{ minWidth: 160 }}
+                  size="small"
+                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
                 >
                   <MenuItem value="">All</MenuItem>
                   <MenuItem value="open">Open</MenuItem>
@@ -1058,16 +930,19 @@ const AdminPanel: React.FC = () => {
                   options={Array.from(new Set(tickets.flatMap(t => t.labels || [])))}
                   value={labelFilter}
                   onChange={(_, v) => setLabelFilter(v)}
-                  renderInput={params => <TextField {...params} label="Label Filter" sx={{ minWidth: 160 }} />}
+                  renderInput={params => <TextField {...params} label="Label Filter" sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }} size="small" />}
                   size="small"
-                  sx={{ minWidth: 160 }}
+                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
                 />
+              </Box>
+              <Box mb={3} display="flex" gap={2} flexWrap="wrap">
                 <TextField
                   select
                   label="Assigned Admin"
                   value={assignedToFilter}
                   onChange={e => setAssignedToFilter(e.target.value)}
-                  sx={{ minWidth: 160 }}
+                  size="small"
+                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
                 >
                   <MenuItem value="">All</MenuItem>
                   {admins.map(a => (
@@ -1078,23 +953,38 @@ const AdminPanel: React.FC = () => {
                   label="From Date"
                   value={fromDate}
                   onChange={setFromDate}
-                  slotProps={{ textField: { size: 'small', sx: { minWidth: 140 } } }}
+                  slotProps={{ textField: { size: 'small', sx: { minWidth: 140, flex: '0 0 auto', height: 40, mb: 0 } } }}
                 />
                 <DatePicker
                   label="To Date"
                   value={toDate}
                   onChange={setToDate}
-                  slotProps={{ textField: { size: 'small', sx: { minWidth: 140 } } }}
+                  slotProps={{ textField: { size: 'small', sx: { minWidth: 140, flex: '0 0 auto', height: 40, mb: 0 } } }}
                 />
                 <TextField
                   label="Search Ticket"
                   value={searchTicket}
                   onChange={e => setSearchTicket(e.target.value)}
-                  sx={{ minWidth: 200 }}
+                  size="small"
+                  sx={{ minWidth: 200, flex: '0 0 auto', height: 40, mb: 0 }}
                 />
               </Box>
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-                <Box display="flex" gap={2} flexDirection={{ xs: 'column', md: 'row' }}>
+                <Box
+                  display="flex"
+                  gap={2}
+                  flexDirection={{ xs: 'column', sm: 'row' }}
+                  sx={{
+                    overflowX: { xs: 'visible', sm: 'auto' },
+                    width: '100%',
+                    minHeight: 400,
+                    pb: 2,
+                    flexWrap: 'nowrap',
+                    minWidth: 0,
+                    '&::-webkit-scrollbar': { height: 8 },
+                    '&::-webkit-scrollbar-thumb': { bgcolor: '#e3f2fd', borderRadius: 4 },
+                  }}
+                >
                   {columns.map(col => (
                     <TicketColumn key={col.key} col={col} tickets={ticketsByStatus[col.key]}>
                       <SortableContext items={ticketsByStatus[col.key].map(t => t._id)} strategy={verticalListSortingStrategy}>
@@ -1478,7 +1368,7 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
           sx={{ minWidth: 160 }}
           SelectProps={{ native: true }}
         >
-          <option value="">All Actions</option>
+          <option value=""></option>
           {uniqueActions.map(action => (
             <option key={action} value={action}>{action.replace(/_/g, ' ').toUpperCase()}</option>
           ))}
@@ -1491,7 +1381,7 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
           sx={{ minWidth: 160 }}
           SelectProps={{ native: true }}
         >
-          <option value="">All Users</option>
+          <option value=""></option>
           {admins.map(admin => (
             <option key={admin._id} value={admin._id}>{admin.username} ({admin.role})</option>
           ))}

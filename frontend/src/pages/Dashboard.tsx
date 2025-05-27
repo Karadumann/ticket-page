@@ -3,7 +3,7 @@ import { Box, Typography, Paper, CircularProgress, Alert, Grid } from '@mui/mate
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { AdminHeader } from './AdminPanel';
+import Header from '../components/Header';
 import Avatar from '@mui/material/Avatar';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -103,7 +103,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <>
-      <AdminHeader activeSection="dashboard" onSectionChange={handleSectionChange} isSuperAdmin={isSuperAdmin} />
+      <Header activeSection="dashboard" onSectionChange={handleSectionChange} isSuperAdmin={isSuperAdmin} />
       <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', py: 4, px: { xs: 1, md: 4 }, pt: { xs: 8, md: 10 } }}>
         {/* Welcome and avatar */}
         <Box display="flex" alignItems="center" gap={2} mb={3}>

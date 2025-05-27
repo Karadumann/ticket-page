@@ -3,7 +3,7 @@ import { Box, Typography, Paper, TextField, Button, Alert, Snackbar, Checkbox, F
 import Avatar from '@mui/material/Avatar';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { AdminHeader } from './AdminPanel';
+import Header from '../components/Header';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { IconButton as MuiIconButton } from '@mui/material';
 
@@ -243,11 +243,40 @@ const Profile: React.FC = () => {
 
   return (
     <>
-      <AdminHeader activeSection={'' as any} onSectionChange={() => {}} />
-      <Box maxWidth={500} mx="auto" mt={6}>
-        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate(-1)} sx={{ mb: 2 }} variant="outlined">Back</Button>
-        <Paper elevation={4} sx={{ p: 4, borderRadius: 3 }}>
-          <Typography variant="h5" color="primary" fontWeight={700} mb={2} align="center">
+      <Header activeSection={'' as any} onSectionChange={() => {}} />
+      <Box
+        maxWidth={{ xs: '99%', sm: 400, md: 500 }}
+        mx="auto"
+        mt={{ xs: 7, sm: 10, md: 13 }}
+        px={{ xs: 1, sm: 0 }}
+      >
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(-1)}
+          sx={{ mb: { xs: 1, sm: 2 }, mt: 0, fontSize: { xs: 15, sm: 16 } }}
+          variant="outlined"
+          fullWidth={true}
+        >
+          Back
+        </Button>
+        <Paper
+          elevation={4}
+          sx={{
+            p: { xs: 2, sm: 3, md: 4 },
+            borderRadius: 3,
+            mt: { xs: 2, sm: 3, md: 4 },
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Typography
+            variant="h5"
+            color="primary"
+            fontWeight={700}
+            mb={2}
+            align="center"
+            sx={{ fontSize: { xs: 22, sm: 26, md: 28 } }}
+          >
             My Profile
           </Typography>
           {msg && <Alert severity="success" sx={{ mb: 2 }}>{msg}</Alert>}
