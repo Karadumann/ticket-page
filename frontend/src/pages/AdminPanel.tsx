@@ -1396,6 +1396,11 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  // Filters
+  const [actionFilter, setActionFilter] = useState('');
+  const [userFilter, setUserFilter] = useState('');
+  const [fromDate, setFromDate] = useState<string | null>(null);
+  const [toDate, setToDate] = useState<string | null>(null);
 
   // Kullanıcı rolünü kontrol et
   let isSuperAdmin = false;
@@ -1411,7 +1416,12 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('/api/admin/logs', {
+      const params = new URLSearchParams();
+      if (actionFilter) params.append('action', actionFilter);
+      if (userFilter) params.append('user', userFilter);
+      if (fromDate) params.append('from', fromDate);
+      if (toDate) params.append('to', toDate);
+      const res = await fetch(`/api/admin/logs?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -1425,7 +1435,8 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
 
   useEffect(() => {
     fetchLogs();
-  }, []);
+    // eslint-disable-next-line
+  }, [actionFilter, userFilter, fromDate, toDate]);
 
   const handleDeleteAllLogs = async () => {
     if (!window.confirm('All logs will be deleted. Are you sure?')) return;
@@ -1451,9 +1462,56 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
   if (loading) return <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh"><Typography>Loading logs...</Typography></Box>;
   if (error) return <Alert severity="error" sx={{ my: 2 }}>{error}</Alert>;
 
+  // Unique actions for filter dropdown
+  const uniqueActions = Array.from(new Set(logs.map(l => l.action))).filter(Boolean);
+
   return (
     <Paper sx={{ p: { xs: 1, md: 4 }, mt: 2, width: '100%', maxWidth: 1200, mx: 'auto', borderRadius: 4 }}>
       <Typography variant="h5" fontWeight={700} mb={3} color="primary">System Logs</Typography>
+      {/* Filters */}
+      <Box display="flex" flexWrap="wrap" gap={2} mb={2}>
+        <TextField
+          select
+          label="Action"
+          value={actionFilter}
+          onChange={e => setActionFilter(e.target.value)}
+          sx={{ minWidth: 160 }}
+          SelectProps={{ native: true }}
+        >
+          <option value="">All Actions</option>
+          {uniqueActions.map(action => (
+            <option key={action} value={action}>{action.replace(/_/g, ' ').toUpperCase()}</option>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="User"
+          value={userFilter}
+          onChange={e => setUserFilter(e.target.value)}
+          sx={{ minWidth: 160 }}
+          SelectProps={{ native: true }}
+        >
+          <option value="">All Users</option>
+          {admins.map(admin => (
+            <option key={admin._id} value={admin._id}>{admin.username} ({admin.role})</option>
+          ))}
+        </TextField>
+        <TextField
+          label="From"
+          type="date"
+          value={fromDate || ''}
+          onChange={e => setFromDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          label="To"
+          type="date"
+          value={toDate || ''}
+          onChange={e => setToDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <Button variant="outlined" onClick={() => { setActionFilter(''); setUserFilter(''); setFromDate(null); setToDate(null); }}>Clear Filters</Button>
+      </Box>
       {isSuperAdmin && (
         <Button
           variant="contained"

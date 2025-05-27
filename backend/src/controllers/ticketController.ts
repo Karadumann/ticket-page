@@ -4,6 +4,9 @@ import Log from '../models/Log';
 import { io } from '../app';
 import Notification from '../models/Notification';
 import { PipelineStage } from 'mongoose';
+import { sendMail } from '../utils/sendMail';
+import { sendDiscordMessage } from '../utils/sendDiscordMessage';
+import { sendTelegramMessage } from '../utils/sendTelegramMessage';
 
 interface AuthRequest extends ExpressRequest {
   user?: any;
@@ -112,6 +115,24 @@ export const replyTicket = async (req: AuthRequest, res: Response) => {
         link: `/tickets/${ticket._id}`
       });
       io.to(String(ticket.user)).emit('notification', notif);
+      // Bildirim tercihlerine göre e-posta/discord/telegram gönder
+      const user = await (await import('../models/User')).default.findById(ticket.user);
+      if (user && user.notificationPreferences) {
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}`;
+        if (user.notificationPreferences.email && user.email) {
+          sendMail({
+            to: user.email,
+            subject: 'Your ticket received a new reply',
+            text: `Your ticket "${ticket.title}" received a new reply.\n\nView: ${url}`
+          }).catch(() => {});
+        }
+        if (user.notificationPreferences.discord && user.discordId) {
+          sendDiscordMessage(user.discordId, `Your ticket "${ticket.title}" received a new reply.\n\nView: ${url}`).catch(() => {});
+        }
+        if (user.notificationPreferences.telegram && user.telegramId) {
+          sendTelegramMessage(user.telegramId, `Your ticket "${ticket.title}" received a new reply.\n\nView: ${url}`).catch(() => {});
+        }
+      }
     }
     // Notify all admins except the replier
     const admins = await (await import('../models/User')).default.find({ role: { $in: ['admin', 'superadmin', 'moderator', 'staff'] } });
@@ -199,6 +220,24 @@ export const updateTicketStatus = async (req: any, res: any) => {
         link: `/tickets/${ticket._id}`
       });
       io.to(String(ticket.user)).emit('notification', notif);
+      // Bildirim tercihlerine göre e-posta/discord/telegram gönder
+      const user = await (await import('../models/User')).default.findById(ticket.user);
+      if (user && user.notificationPreferences) {
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}`;
+        if (user.notificationPreferences.email && user.email) {
+          sendMail({
+            to: user.email,
+            subject: `Ticket status updated: ${status}`,
+            text: `The status of your ticket "${ticket.title}" changed to ${status}.\n\nView: ${url}`
+          }).catch(() => {});
+        }
+        if (user.notificationPreferences.discord && user.discordId) {
+          sendDiscordMessage(user.discordId, `The status of your ticket "${ticket.title}" changed to ${status}.\n\nView: ${url}`).catch(() => {});
+        }
+        if (user.notificationPreferences.telegram && user.telegramId) {
+          sendTelegramMessage(user.telegramId, `The status of your ticket "${ticket.title}" changed to ${status}.\n\nView: ${url}`).catch(() => {});
+        }
+      }
     }
     const admins = await (await import('../models/User')).default.find({ role: { $in: ['admin', 'superadmin', 'moderator', 'staff'] } });
     const notifications = admins
