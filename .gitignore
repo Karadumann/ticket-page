@@ -23,3 +23,5 @@ node_modules
 /backend/src/public
 /frontend/src/public
 
+backend/src/.env
+frontend/src/.env
