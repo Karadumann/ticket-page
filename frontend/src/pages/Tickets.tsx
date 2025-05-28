@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Button, TextField, Typography, Paper, Alert, List, ListItem, Snackbar } from '@mui/material';
+import { Box, Button, TextField, Typography, Paper, Alert, List, ListItem, Snackbar, ToggleButton, ToggleButtonGroup, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import { io as socketIOClient, Socket } from 'socket.io-client';
 import { UserHeader } from '../components/Header';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
 
 interface Ticket {
   _id: string;
@@ -38,6 +40,7 @@ const Tickets: React.FC = () => {
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [userInfo, setUserInfo] = useState<{ username?: string; avatar?: string }>({});
+  const [viewType, setViewType] = useState<'card' | 'list'>('card');
 
   const fetchTickets = async () => {
     setError('');
@@ -255,157 +258,203 @@ const Tickets: React.FC = () => {
         </Box>
         <Box flex={2} maxWidth={600} width="100%">
           <Paper elevation={0} sx={{ p: { xs: 1, md: 3 }, borderRadius: 2, bgcolor: 'transparent', color: 'var(--foreground)', width: '100%', overflowX: 'auto' }}>
-            <Typography variant="h5" sx={{ color: 'var(--primary)', fontWeight: 800, mb: 3, fontSize: { xs: 20, md: 26 }, letterSpacing: 0.5 }} align="center">
-              My Tickets
-            </Typography>
-            <List sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
-              {tickets.length === 0 && (
-                <Typography align="center" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 15, md: 17 }, my: 4 }}>No tickets yet.</Typography>
-              )}
-              {tickets.map(ticket => {
-                // Kullanıcı ve assigned bilgisi için badge -> Badge for user and assigned info
-                const userBadge = (
-                  <Typography variant="caption" sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 1, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 12, ml: 1 }}>
-                    User: {ticket.user || '-'}
-                  </Typography>
-                );
-                const assignedBadge = ticket.assignedTo ? (
-                  <Typography variant="caption" sx={{ bgcolor: '#e0f7fa', color: '#00796b', px: 1, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 12, ml: 1 }}>
-                    Assigned: {ticket.assignedTo.username}
-                  </Typography>
-                ) : null;
-                // Category ve priority renkleri
-                let categoryColor = '#e3f2fd';
-                let categoryText = '#1976d2';
-                switch (ticket.category) {
-                  case 'bug': categoryColor = '#ffebee'; categoryText = '#d32f2f'; break;
-                  case 'payment': categoryColor = '#fffde7'; categoryText = '#fbc02d'; break;
-                  case 'account': categoryColor = '#e3f2fd'; categoryText = '#1976d2'; break;
-                  case 'suggestion': categoryColor = '#e8f5e9'; categoryText = '#388e3c'; break;
-                  case 'report_player': categoryColor = '#f3e5f5'; categoryText = '#8e24aa'; break;
-                  case 'technical': categoryColor = '#e0f7fa'; categoryText = '#00796b'; break;
-                  case 'other': categoryColor = '#eceff1'; categoryText = '#455a64'; break;
-                }
-                let priorityLabel = '-';
-                let priorityBg = '#e3f2fd';
-                let priorityColor = '#222';
-                switch (ticket.priority) {
-                  case 'very_high': priorityLabel = 'Very High'; priorityBg = '#ff1744'; priorityColor = '#fff'; break;
-                  case 'high': priorityLabel = 'High'; priorityBg = '#ff9100'; priorityColor = '#fff'; break;
-                  case 'medium': priorityLabel = 'Medium'; priorityBg = '#2979ff'; priorityColor = '#fff'; break;
-                  case 'low': priorityLabel = 'Low'; priorityBg = '#00e676'; priorityColor = '#222'; break;
-                  default: priorityLabel = ticket.priority || '-';
-                }
-                return (
-                  <React.Fragment key={ticket._id}>
-                    <ListItem
-                      alignItems="flex-start"
-                      component="div"
-                      onClick={() => handleTicketClick(ticket)}
-                      sx={{
-                        cursor: 'pointer',
-                        borderRadius: 1,
-                        mb: 2,
-                        bgcolor: ticket.assignedTo && ticket.assignedTo.username === currentUserId ? '#e3f2fd' : 'var(--card)',
-                        color: 'var(--foreground)',
-                        boxShadow: 2,
-                        p: { xs: 2, md: 3 },
-                        minWidth: 0,
-                        maxWidth: '100%',
-                        width: '100%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 1.5,
-                        overflow: 'hidden',
-                        wordBreak: 'break-word',
-                      }}
-                    >
-                      {/* Üst bilgi alanı -> Header info area */}
-                      <Box mb={1}>
-                        {/* İlk satır: Category, Priority, Created, Updated yan yana */}
-                        <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" mb={0.5}>
-                          <Typography variant="caption" sx={{ bgcolor: categoryColor, color: categoryText, px: 1.5, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, minWidth: 60, textAlign: 'center' }}>
-                            {ticket.category ? (ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1).replace('_', ' ')) : '-'}
-                          </Typography>
-                          <Typography variant="caption" sx={{ bgcolor: priorityBg, color: priorityColor, px: 1.5, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, minWidth: 60, textAlign: 'center' }}>
-                            {priorityLabel}
-                          </Typography>
-                          {ticket.createdAt ? <Typography variant="caption" sx={{ bgcolor: '#f5f5f5', color: '#888', px: 1, py: 0.5, borderRadius: 2, fontWeight: 600, fontSize: 12 }}>Created: {new Date(ticket.createdAt).toLocaleDateString()}</Typography> : null}
-                          {ticket.updatedAt ? <Typography variant="caption" sx={{ bgcolor: '#f5f5f5', color: '#888', px: 1, py: 0.5, borderRadius: 2, fontWeight: 600, fontSize: 12 }}>Updated: {new Date(ticket.updatedAt).toLocaleDateString()}</Typography> : null}
-                        </Box>
-                        {/* Alt satır: Solda user, sağda status -> Bottom row: user on the left, status on the right */}
-                        <Box display="flex" alignItems="center" width="100%">
-                          <Box>{userBadge}</Box>
-                          {assignedBadge}
-                        </Box>
-                      </Box>
-                      {/* Title */}
-                      <Typography variant="h6" sx={{ color: 'var(--primary)', fontWeight: 700, fontSize: { xs: 17, md: 20 }, whiteSpace: 'normal', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', wordBreak: 'break-word', mb: 0.5 }}>
-                        {ticket.title}
-                      </Typography>
-                      <Box display="flex" gap={2} flexWrap="wrap" mb={1}>
-                        <Typography variant="body2" sx={{ color: 'var(--primary)', fontWeight: 600, fontSize: { xs: 13, md: 15 } }}><b>Nickname:</b> {ticket.nickname || '-'}</Typography>
-                      </Box>
-                      <Typography variant="body2" sx={{ color: 'var(--foreground)', fontSize: { xs: 14, md: 16 }, mb: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', maxWidth: '100%', wordBreak: 'break-word', whiteSpace: 'normal' }}>
-                        <b>Description:</b> {ticket.description}
-                      </Typography>
-                      {(ticket.screenshotUrls?.length ?? 0) > 0 && (
-                        <Box mb={1} display="flex" flexDirection="column" gap={0.5}>
-                          {(ticket.screenshotUrls || []).map((url, i) => (
-                            <Typography key={i} variant="body2" sx={{ color: 'var(--primary)', fontSize: { xs: 13, md: 15 } }}>
-                              <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Screenshot {ticket.screenshotUrls && ticket.screenshotUrls.length > 1 ? `#${i + 1}` : ''}</a>
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+              <Typography variant="h5" sx={{ color: 'var(--primary)', fontWeight: 800, fontSize: { xs: 20, md: 26 }, letterSpacing: 0.5 }} align="center">
+                My Tickets
+              </Typography>
+              <ToggleButtonGroup
+                value={viewType}
+                exclusive
+                onChange={(_, next) => next && setViewType(next)}
+                size="small"
+                sx={{ ml: 2 }}
+              >
+                <ToggleButton value="card" aria-label="Card View"><ViewModuleIcon /></ToggleButton>
+                <ToggleButton value="list" aria-label="List View"><ViewListIcon /></ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+            {viewType === 'card' ? (
+              <List sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+                {tickets.length === 0 && (
+                  <Typography align="center" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 15, md: 17 }, my: 4 }}>No tickets yet.</Typography>
+                )}
+                {tickets.map(ticket => {
+                  // Kullanıcı ve assigned bilgisi için badge -> Badge for user and assigned info
+                  const userBadge = (
+                    <Typography variant="caption" sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 1, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 12, ml: 1 }}>
+                      User: {ticket.user || '-'}
+                    </Typography>
+                  );
+                  const assignedBadge = ticket.assignedTo ? (
+                    <Typography variant="caption" sx={{ bgcolor: '#e0f7fa', color: '#00796b', px: 1, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 12, ml: 1 }}>
+                      Assigned: {ticket.assignedTo.username}
+                    </Typography>
+                  ) : null;
+                  // Category ve priority renkleri
+                  let categoryColor = '#e3f2fd';
+                  let categoryText = '#1976d2';
+                  switch (ticket.category) {
+                    case 'bug': categoryColor = '#ffebee'; categoryText = '#d32f2f'; break;
+                    case 'payment': categoryColor = '#fffde7'; categoryText = '#fbc02d'; break;
+                    case 'account': categoryColor = '#e3f2fd'; categoryText = '#1976d2'; break;
+                    case 'suggestion': categoryColor = '#e8f5e9'; categoryText = '#388e3c'; break;
+                    case 'report_player': categoryColor = '#f3e5f5'; categoryText = '#8e24aa'; break;
+                    case 'technical': categoryColor = '#e0f7fa'; categoryText = '#00796b'; break;
+                    case 'other': categoryColor = '#eceff1'; categoryText = '#455a64'; break;
+                  }
+                  let priorityLabel = '-';
+                  let priorityBg = '#e3f2fd';
+                  let priorityColor = '#222';
+                  switch (ticket.priority) {
+                    case 'very_high': priorityLabel = 'Very High'; priorityBg = '#ff1744'; priorityColor = '#fff'; break;
+                    case 'high': priorityLabel = 'High'; priorityBg = '#ff9100'; priorityColor = '#fff'; break;
+                    case 'medium': priorityLabel = 'Medium'; priorityBg = '#2979ff'; priorityColor = '#fff'; break;
+                    case 'low': priorityLabel = 'Low'; priorityBg = '#00e676'; priorityColor = '#222'; break;
+                    default: priorityLabel = ticket.priority || '-';
+                  }
+                  return (
+                    <React.Fragment key={ticket._id}>
+                      <ListItem
+                        alignItems="flex-start"
+                        component="div"
+                        onClick={() => handleTicketClick(ticket)}
+                        sx={{
+                          cursor: 'pointer',
+                          borderRadius: 1,
+                          mb: 2,
+                          bgcolor: ticket.assignedTo && ticket.assignedTo.username === currentUserId ? '#e3f2fd' : 'var(--card)',
+                          color: 'var(--foreground)',
+                          boxShadow: 2,
+                          p: { xs: 2, md: 3 },
+                          minWidth: 0,
+                          maxWidth: '100%',
+                          width: '100%',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: 1.5,
+                          overflow: 'hidden',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {/* Üst bilgi alanı -> Header info area */}
+                        <Box mb={1}>
+                          {/* İlk satır: Category, Priority, Created, Updated yan yana */}
+                          <Box display="flex" gap={1} alignItems="center" flexWrap="wrap" mb={0.5}>
+                            <Typography variant="caption" sx={{ bgcolor: categoryColor, color: categoryText, px: 1.5, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, minWidth: 60, textAlign: 'center' }}>
+                              {ticket.category ? (ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1).replace('_', ' ')) : '-'}
                             </Typography>
+                            <Typography variant="caption" sx={{ bgcolor: priorityBg, color: priorityColor, px: 1.5, py: 0.5, borderRadius: 2, fontWeight: 700, fontSize: 13, letterSpacing: 0.5, minWidth: 60, textAlign: 'center' }}>
+                              {priorityLabel}
+                            </Typography>
+                            {ticket.createdAt ? <Typography variant="caption" sx={{ bgcolor: '#f5f5f5', color: '#888', px: 1, py: 0.5, borderRadius: 2, fontWeight: 600, fontSize: 12 }}>Created: {new Date(ticket.createdAt).toLocaleDateString()}</Typography> : null}
+                            {ticket.updatedAt ? <Typography variant="caption" sx={{ bgcolor: '#f5f5f5', color: '#888', px: 1, py: 0.5, borderRadius: 2, fontWeight: 600, fontSize: 12 }}>Updated: {new Date(ticket.updatedAt).toLocaleDateString()}</Typography> : null}
+                          </Box>
+                          {/* Alt satır: Solda user, sağda status -> Bottom row: user on the left, status on the right */}
+                          <Box display="flex" alignItems="center" width="100%">
+                            <Box>{userBadge}</Box>
+                            {assignedBadge}
+                          </Box>
+                        </Box>
+                        {/* Title */}
+                        <Typography variant="h6" sx={{ color: 'var(--primary)', fontWeight: 700, fontSize: { xs: 17, md: 20 }, whiteSpace: 'normal', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%', wordBreak: 'break-word', mb: 0.5 }}>
+                          {ticket.title}
+                        </Typography>
+                        <Box display="flex" gap={2} flexWrap="wrap" mb={1}>
+                          <Typography variant="body2" sx={{ color: 'var(--primary)', fontWeight: 600, fontSize: { xs: 13, md: 15 } }}><b>Nickname:</b> {ticket.nickname || '-'}</Typography>
+                        </Box>
+                        <Typography variant="body2" sx={{ color: 'var(--foreground)', fontSize: { xs: 14, md: 16 }, mb: 1, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', maxWidth: '100%', wordBreak: 'break-word', whiteSpace: 'normal' }}>
+                          <b>Description:</b> {ticket.description}
+                        </Typography>
+                        {(ticket.screenshotUrls?.length ?? 0) > 0 && (
+                          <Box mb={1} display="flex" flexDirection="column" gap={0.5}>
+                            {(ticket.screenshotUrls || []).map((url, i) => (
+                              <Typography key={i} variant="body2" sx={{ color: 'var(--primary)', fontSize: { xs: 13, md: 15 } }}>
+                                <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Screenshot {ticket.screenshotUrls && ticket.screenshotUrls.length > 1 ? `#${i + 1}` : ''}</a>
+                              </Typography>
+                            ))}
+                          </Box>
+                        )}
+                        <Box display="flex" gap={2} flexWrap="wrap" mb={1} alignItems="center">
+                          <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 15 } }}><b>Replies:</b> {ticket.replies?.length || 0}</Typography>
+                        </Box>
+                        <Box display="flex" justifyContent="flex-end" alignItems="center" width="100%" mt={2}>
+                          <Box
+                            sx={{
+                              px: 2,
+                              py: 0.5,
+                              borderRadius: '9999px',
+                              fontWeight: 700,
+                              fontSize: { xs: 13, md: 15 },
+                              bgcolor:
+                                ticket.status === 'open'
+                                  ? 'rgba(34,197,94,0.15)'
+                                  : ticket.status === 'in_progress'
+                                  ? 'rgba(251,191,36,0.15)'
+                                  : 'rgba(63,167,255,0.15)',
+                              color:
+                                ticket.status === 'open'
+                                  ? '#22c55e'
+                                  : ticket.status === 'in_progress'
+                                  ? '#fbbf24'
+                                  : '#3fa7ff',
+                              border: '2px solid',
+                              borderColor:
+                                ticket.status === 'open'
+                                  ? '#22c55e'
+                                  : ticket.status === 'in_progress'
+                                  ? '#fbbf24'
+                                  : '#3fa7ff',
+                              textTransform: 'capitalize',
+                              minWidth: 80,
+                              textAlign: 'center',
+                            }}
+                          >
+                            {ticket.status.replace('_', ' ')}
+                          </Box>
+                        </Box>
+                        <Box display="flex" gap={1} flexWrap="wrap" mt={0.5}>
+                          {Array.isArray(ticket.labels) && ticket.labels.length > 0 && ticket.labels.map((label, idx) => (
+                            <Box key={idx} sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 1.5, py: 0.5, borderRadius: 2, fontSize: 13, fontWeight: 600 }}>{label}</Box>
                           ))}
                         </Box>
-                      )}
-                      <Box display="flex" gap={2} flexWrap="wrap" mb={1} alignItems="center">
-                        <Typography variant="body2" sx={{ color: 'var(--muted-foreground)', fontSize: { xs: 13, md: 15 } }}><b>Replies:</b> {ticket.replies?.length || 0}</Typography>
-                      </Box>
-                      <Box display="flex" justifyContent="flex-end" alignItems="center" width="100%" mt={2}>
-                        <Box
-                          sx={{
-                            px: 2,
-                            py: 0.5,
-                            borderRadius: '9999px',
-                            fontWeight: 700,
-                            fontSize: { xs: 13, md: 15 },
-                            bgcolor:
-                              ticket.status === 'open'
-                                ? 'rgba(34,197,94,0.15)'
-                                : ticket.status === 'in_progress'
-                                ? 'rgba(251,191,36,0.15)'
-                                : 'rgba(63,167,255,0.15)',
-                            color:
-                              ticket.status === 'open'
-                                ? '#22c55e'
-                                : ticket.status === 'in_progress'
-                                ? '#fbbf24'
-                                : '#3fa7ff',
-                            border: '2px solid',
-                            borderColor:
-                              ticket.status === 'open'
-                                ? '#22c55e'
-                                : ticket.status === 'in_progress'
-                                ? '#fbbf24'
-                                : '#3fa7ff',
-                            textTransform: 'capitalize',
-                            minWidth: 80,
-                            textAlign: 'center',
-                          }}
-                        >
-                          {ticket.status.replace('_', ' ')}
-                        </Box>
-                      </Box>
-                      <Box display="flex" gap={1} flexWrap="wrap" mt={0.5}>
-                        {Array.isArray(ticket.labels) && ticket.labels.length > 0 && ticket.labels.map((label, idx) => (
-                          <Box key={idx} sx={{ bgcolor: '#e3f2fd', color: '#1976d2', px: 1.5, py: 0.5, borderRadius: 2, fontSize: 13, fontWeight: 600 }}>{label}</Box>
-                        ))}
-                      </Box>
-                    </ListItem>
-                  </React.Fragment>
-                );
-              })}
-            </List>
+                      </ListItem>
+                    </React.Fragment>
+                  );
+                })}
+              </List>
+            ) : (
+              <TableContainer component={Paper} sx={{ boxShadow: 2, borderRadius: 2 }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Title</TableCell>
+                      <TableCell>Category</TableCell>
+                      <TableCell>Priority</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Created</TableCell>
+                      <TableCell>Replies</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {tickets.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} align="center">No tickets yet.</TableCell>
+                      </TableRow>
+                    )}
+                    {tickets.map(ticket => (
+                      <TableRow key={ticket._id} hover sx={{ cursor: 'pointer' }} onClick={() => handleTicketClick(ticket)}>
+                        <TableCell>{ticket.title}</TableCell>
+                        <TableCell>{ticket.category ? ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1).replace('_', ' ') : '-'}</TableCell>
+                        <TableCell>{ticket.priority ? ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1).replace('_', ' ') : '-'}</TableCell>
+                        <TableCell sx={{ textTransform: 'capitalize' }}>{ticket.status.replace('_', ' ')}</TableCell>
+                        <TableCell>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : '-'}</TableCell>
+                        <TableCell>{ticket.replies?.length || 0}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </Paper>
         </Box>
         <Snackbar

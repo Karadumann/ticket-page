@@ -25,18 +25,23 @@ export const register = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   try {
+    console.log('JWT_SECRET:', JWT_SECRET);
+    console.log('Login request body:', req.body);
     const { email, password } = req.body;
     const user = await User.findOne({ email });
+    console.log('User found:', user);
     if (!user) {
       return res.status(400).json({ message: 'Invalid email or password.' });
     }
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', isMatch);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid email or password.' });
     }
     const token = jwt.sign({ id: user._id, role: user.role, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user: { id: user._id, username: user.username, email: user.email, role: user.role } });
   } catch (err) {
+    console.error('Login error:', err);
     res.status(500).json({ message: 'Server error.' });
   }
 };

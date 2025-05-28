@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Alert, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, MenuItem, Select, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { Box, Typography, Paper, Alert, TextField, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, Button, MenuItem, Select, List, ListItem, ListItemText, Divider, ToggleButton, ToggleButtonGroup, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@mui/material';
 import { jwtDecode } from 'jwt-decode';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import EditIcon from '@mui/icons-material/Edit';
@@ -35,6 +35,14 @@ import AdminChat from '../components/AdminChat';
 import Autocomplete from '@mui/material/Autocomplete';
 import Avatar from '@mui/material/Avatar';
 import Header from '../components/Header';
+import ViewModuleIcon from '@mui/icons-material/ViewModule';
+import ViewListIcon from '@mui/icons-material/ViewList';
+import Chip from '@mui/material/Chip';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import ForumIcon from '@mui/icons-material/Forum';
+import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
+import Menu from '@mui/material/Menu';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
 interface User {
   _id: string;
@@ -130,6 +138,9 @@ const AdminPanel: React.FC = () => {
   const [assignedToFilter, setAssignedToFilter] = useState<string>('');
   const [hasNewTickets, setHasNewTickets] = useState(false);
   const [newTicketCount, setNewTicketCount] = useState(0);
+  const [viewType, setViewType] = useState<'kanban' | 'list'>('kanban');
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [filterType, setFilterType] = useState<'category' | 'priority' | 'status' | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -713,6 +724,21 @@ const AdminPanel: React.FC = () => {
     } catch {}
   };
 
+  const handleFilterMenuOpen = (event: React.MouseEvent<HTMLElement>, type: 'category' | 'priority' | 'status') => {
+    setAnchorEl(event.currentTarget);
+    setFilterType(type);
+  };
+  const handleFilterMenuClose = () => {
+    setAnchorEl(null);
+    setFilterType(null);
+  };
+  const handleFilterSelect = (type: 'category' | 'priority' | 'status', value: string) => {
+    if (type === 'category') setCategoryFilter(value);
+    if (type === 'priority') setPriorityFilter(value);
+    if (type === 'status') setStatusFilter(value);
+    handleFilterMenuClose();
+  };
+
   if (!isAdmin) {
     return <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh"><Alert severity="error">Unauthorized. Only admins can access this page.</Alert></Box>;
   }
@@ -868,138 +894,302 @@ const AdminPanel: React.FC = () => {
             <Typography variant="subtitle1" color="primary" mb={1} align="center">
               Total Tickets: {totalTickets}
             </Typography>
-            <Paper elevation={4} sx={{ p: { xs: 1, md: 5 }, borderRadius: 4, width: { xs: '99%', sm: '98%', md: '95%' }, mx: 'auto', bgcolor: 'var(--sidebar)', color: 'var(--sidebar-foreground)', boxShadow: 6 }}>
-              <Typography variant="h6" sx={{ color: 'var(--primary)', mb: 2, fontSize: { xs: 18, md: 22 } }}>Tickets</Typography>
-              <Box mb={1} display="flex" gap={2} flexWrap="wrap">
-                <TextField
-                  select
-                  label="Category Filter"
-                  value={categoryFilter}
-                  onChange={e => setCategoryFilter(e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="bug">Bug</MenuItem>
-                  <MenuItem value="payment">Payment</MenuItem>
-                  <MenuItem value="account">Account</MenuItem>
-                  <MenuItem value="suggestion">Suggestion</MenuItem>
-                  <MenuItem value="report_player">Report Player</MenuItem>
-                  <MenuItem value="technical">Technical</MenuItem>
-                  <MenuItem value="other">Other</MenuItem>
-                </TextField>
-                <TextField
-                  select
-                  label="Priority Filter"
-                  value={priorityFilter}
-                  onChange={e => setPriorityFilter(e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="low">Low</MenuItem>
-                  <MenuItem value="medium">Medium</MenuItem>
-                  <MenuItem value="high">High</MenuItem>
-                  <MenuItem value="very_high">Very High</MenuItem>
-                </TextField>
-                <TextField
-                  select
-                  label="Status Filter"
-                  value={statusFilter}
-                  onChange={e => setStatusFilter(e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="open">Open</MenuItem>
-                  <MenuItem value="in_progress">In Progress</MenuItem>
-                  <MenuItem value="resolved">Resolved</MenuItem>
-                </TextField>
-                <Autocomplete
-                  multiple
-                  options={Array.from(new Set(tickets.flatMap(t => t.labels || [])))}
-                  value={labelFilter}
-                  onChange={(_, v) => setLabelFilter(v)}
-                  renderInput={params => <TextField {...params} label="Label Filter" sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }} size="small" />}
-                  size="small"
-                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
-                />
-              </Box>
-              <Box mb={3} display="flex" gap={2} flexWrap="wrap">
-                <TextField
-                  select
-                  label="Assigned Admin"
-                  value={assignedToFilter}
-                  onChange={e => setAssignedToFilter(e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
-                >
-                  <MenuItem value="">All</MenuItem>
-                  {admins.map(a => (
-                    <MenuItem key={a._id} value={a._id}>{a.username}</MenuItem>
-                  ))}
-                </TextField>
-                <DatePicker
-                  label="From Date"
-                  value={fromDate}
-                  onChange={setFromDate}
-                  slotProps={{ textField: { size: 'small', sx: { minWidth: 140, flex: '0 0 auto', height: 40, mb: 0 } } }}
-                />
-                <DatePicker
-                  label="To Date"
-                  value={toDate}
-                  onChange={setToDate}
-                  slotProps={{ textField: { size: 'small', sx: { minWidth: 140, flex: '0 0 auto', height: 40, mb: 0 } } }}
-                />
-                <TextField
-                  label="Search Ticket"
-                  value={searchTicket}
-                  onChange={e => setSearchTicket(e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 200, flex: '0 0 auto', height: 40, mb: 0 }}
-                />
-              </Box>
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-                <Box
-                  display="flex"
-                  gap={2}
-                  flexDirection={{ xs: 'column', sm: 'row' }}
-                  sx={{
-                    overflowX: { xs: 'visible', sm: 'auto' },
-                    width: '100%',
-                    minHeight: 400,
-                    pb: 2,
-                    flexWrap: 'nowrap',
-                    minWidth: 0,
-                    '&::-webkit-scrollbar': { height: 8 },
-                    '&::-webkit-scrollbar-thumb': { bgcolor: '#e3f2fd', borderRadius: 4 },
-                  }}
-                >
-                  {columns.map(col => (
-                    <TicketColumn key={col.key} col={col} tickets={ticketsByStatus[col.key]}>
-                      <SortableContext items={ticketsByStatus[col.key].map(t => t._id)} strategy={verticalListSortingStrategy}>
-                        {ticketsByStatus[col.key].map(ticket => (
-                          <TicketCard key={ticket._id} ticket={ticket} colKey={col.key} />
-                        ))}
-                      </SortableContext>
-                    </TicketColumn>
-                  ))}
+            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+              <Typography variant="h6" sx={{ color: 'var(--primary)', mb: 2, fontSize: { xs: 18, md: 22 } }}></Typography>
+              <ToggleButtonGroup
+                value={viewType}
+                exclusive
+                onChange={(_, next) => next && setViewType(next)}
+                size="small"
+                sx={{ ml: 2 }}
+              >
+                <ToggleButton value="kanban" aria-label="Kanban View"><ViewModuleIcon /></ToggleButton>
+                <ToggleButton value="list" aria-label="List View"><ViewListIcon /></ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+            {viewType === 'kanban' ? (
+              <Paper elevation={4} sx={{ p: { xs: 1, md: 5 }, borderRadius: 4, width: { xs: '99%', sm: '98%', md: '95%' }, mx: 'auto', bgcolor: 'var(--sidebar)', color: 'var(--sidebar-foreground)', boxShadow: 6 }}>
+                <Typography variant="h6" sx={{ color: 'var(--primary)', mb: 2, fontSize: { xs: 18, md: 22 } }}>Tickets</Typography>
+                <Box mb={1} display="flex" gap={2} flexWrap="wrap">
+                  <TextField
+                    select
+                    label="Category Filter"
+                    value={categoryFilter}
+                    onChange={e => setCategoryFilter(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="bug">Bug</MenuItem>
+                    <MenuItem value="payment">Payment</MenuItem>
+                    <MenuItem value="account">Account</MenuItem>
+                    <MenuItem value="suggestion">Suggestion</MenuItem>
+                    <MenuItem value="report_player">Report Player</MenuItem>
+                    <MenuItem value="technical">Technical</MenuItem>
+                    <MenuItem value="other">Other</MenuItem>
+                  </TextField>
+                  <TextField
+                    select
+                    label="Priority Filter"
+                    value={priorityFilter}
+                    onChange={e => setPriorityFilter(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="low">Low</MenuItem>
+                    <MenuItem value="medium">Medium</MenuItem>
+                    <MenuItem value="high">High</MenuItem>
+                    <MenuItem value="very_high">Very High</MenuItem>
+                  </TextField>
+                  <TextField
+                    select
+                    label="Status Filter"
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="open">Open</MenuItem>
+                    <MenuItem value="in_progress">In Progress</MenuItem>
+                    <MenuItem value="resolved">Resolved</MenuItem>
+                  </TextField>
+                  <Autocomplete
+                    multiple
+                    options={Array.from(new Set(tickets.flatMap(t => t.labels || [])))}
+                    value={labelFilter}
+                    onChange={(_, v) => setLabelFilter(v)}
+                    renderInput={params => <TextField {...params} label="Label Filter" sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }} size="small" />}
+                    size="small"
+                    sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
+                  />
                 </Box>
-                <DragOverlay>
-                  {activeTicketId ? (
-                    (() => {
-                      const ticket = tickets.find(t => t._id === activeTicketId);
-                      return ticket ? <TicketCard ticket={ticket} colKey={ticket.status} /> : null;
-                    })()
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-              <Box display="flex" justifyContent="center" alignItems="center" mt={2} gap={2}>
-                <Button variant="outlined" onClick={() => setTicketPage(p => Math.max(1, p - 1))} disabled={ticketPage === 1}>Previous</Button>
-                <Typography>Page {ticketPage} / {Math.ceil(totalTickets / TICKETS_PER_PAGE)}</Typography>
-                <Button variant="outlined" onClick={() => setTicketPage(p => p + 1)} disabled={ticketPage >= Math.ceil(totalTickets / TICKETS_PER_PAGE)}>Next</Button>
-              </Box>
-            </Paper>
+                <Box mb={3} display="flex" gap={2} flexWrap="wrap">
+                  <TextField
+                    select
+                    label="Assigned Admin"
+                    value={assignedToFilter}
+                    onChange={e => setAssignedToFilter(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 160, flex: '0 0 auto', height: 40, mb: 0 }}
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    {admins.map(a => (
+                      <MenuItem key={a._id} value={a._id}>{a.username}</MenuItem>
+                    ))}
+                  </TextField>
+                  <DatePicker
+                    label="From Date"
+                    value={fromDate}
+                    onChange={setFromDate}
+                    slotProps={{ textField: { size: 'small', sx: { minWidth: 140, flex: '0 0 auto', height: 40, mb: 0 } } }}
+                  />
+                  <DatePicker
+                    label="To Date"
+                    value={toDate}
+                    onChange={setToDate}
+                    slotProps={{ textField: { size: 'small', sx: { minWidth: 140, flex: '0 0 auto', height: 40, mb: 0 } } }}
+                  />
+                  <TextField
+                    label="Search Ticket"
+                    value={searchTicket}
+                    onChange={e => setSearchTicket(e.target.value)}
+                    size="small"
+                    sx={{ minWidth: 200, flex: '0 0 auto', height: 40, mb: 0 }}
+                  />
+                </Box>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+                  <Box
+                    display="flex"
+                    gap={2}
+                    flexDirection={{ xs: 'column', sm: 'row' }}
+                    sx={{
+                      overflowX: { xs: 'visible', sm: 'auto' },
+                      width: '100%',
+                      minHeight: 400,
+                      pb: 2,
+                      flexWrap: 'nowrap',
+                      minWidth: 0,
+                      '&::-webkit-scrollbar': { height: 8 },
+                      '&::-webkit-scrollbar-thumb': { bgcolor: '#e3f2fd', borderRadius: 4 },
+                    }}
+                  >
+                    {columns.map(col => (
+                      <TicketColumn key={col.key} col={col} tickets={ticketsByStatus[col.key]}>
+                        <SortableContext items={ticketsByStatus[col.key].map(t => t._id)} strategy={verticalListSortingStrategy}>
+                          {ticketsByStatus[col.key].map(ticket => (
+                            <TicketCard key={ticket._id} ticket={ticket} colKey={col.key} />
+                          ))}
+                        </SortableContext>
+                      </TicketColumn>
+                    ))}
+                  </Box>
+                  <DragOverlay>
+                    {activeTicketId ? (
+                      (() => {
+                        const ticket = tickets.find(t => t._id === activeTicketId);
+                        return ticket ? <TicketCard ticket={ticket} colKey={ticket.status} /> : null;
+                      })()
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
+                <Box display="flex" justifyContent="center" alignItems="center" mt={2} gap={2}>
+                  <Button variant="outlined" onClick={() => setTicketPage(p => Math.max(1, p - 1))} disabled={ticketPage === 1}>Previous</Button>
+                  <Typography>Page {ticketPage} / {Math.ceil(totalTickets / TICKETS_PER_PAGE)}</Typography>
+                  <Button variant="outlined" onClick={() => setTicketPage(p => p + 1)} disabled={ticketPage >= Math.ceil(totalTickets / TICKETS_PER_PAGE)}>Next</Button>
+                </Box>
+              </Paper>
+            ) : (
+              <TableContainer component={Paper} sx={{ boxShadow: 4, borderRadius: 3, mt: 2, overflow: 'hidden' }}>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#f5f7fa' }}>
+                      <TableCell sx={{ fontWeight: 700, fontSize: 16 }}>Title</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: 16, cursor: 'pointer', position: 'relative' }} onClick={e => handleFilterMenuOpen(e, 'category')}>
+                        Category <ArrowDropDownIcon fontSize="small" sx={{ verticalAlign: 'middle' }} />
+                        {categoryFilter && <Chip label={categoryFilter.charAt(0).toUpperCase() + categoryFilter.slice(1).replace('_', ' ')} size="small" onDelete={() => setCategoryFilter('')} sx={{ ml: 1, bgcolor: '#e3f2fd', color: '#1976d2' }} />}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: 16, cursor: 'pointer', position: 'relative' }} onClick={e => handleFilterMenuOpen(e, 'priority')}>
+                        Priority <ArrowDropDownIcon fontSize="small" sx={{ verticalAlign: 'middle' }} />
+                        {priorityFilter && <Chip label={priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1).replace('_', ' ')} size="small" onDelete={() => setPriorityFilter('')} sx={{ ml: 1, bgcolor: '#e3f2fd', color: '#1976d2' }} />}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: 16, cursor: 'pointer', position: 'relative' }} onClick={e => handleFilterMenuOpen(e, 'status')}>
+                        Status <ArrowDropDownIcon fontSize="small" sx={{ verticalAlign: 'middle' }} />
+                        {statusFilter && <Chip label={statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1).replace('_', ' ')} size="small" onDelete={() => setStatusFilter('')} sx={{ ml: 1, bgcolor: '#e3f2fd', color: '#1976d2' }} />}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: 16 }}>Assigned</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: 16 }}>Created</TableCell>
+                      <TableCell sx={{ fontWeight: 700, fontSize: 16 }}>Replies</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleFilterMenuClose}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                  >
+                    {filterType === 'category' && [
+                      <MenuItem key="all" selected={categoryFilter === ''} onClick={() => handleFilterSelect('category', '')}>All</MenuItem>,
+                      <MenuItem key="bug" selected={categoryFilter === 'bug'} onClick={() => handleFilterSelect('category', 'bug')}>Bug</MenuItem>,
+                      <MenuItem key="payment" selected={categoryFilter === 'payment'} onClick={() => handleFilterSelect('category', 'payment')}>Payment</MenuItem>,
+                      <MenuItem key="account" selected={categoryFilter === 'account'} onClick={() => handleFilterSelect('category', 'account')}>Account</MenuItem>,
+                      <MenuItem key="suggestion" selected={categoryFilter === 'suggestion'} onClick={() => handleFilterSelect('category', 'suggestion')}>Suggestion</MenuItem>,
+                      <MenuItem key="report_player" selected={categoryFilter === 'report_player'} onClick={() => handleFilterSelect('category', 'report_player')}>Report Player</MenuItem>,
+                      <MenuItem key="technical" selected={categoryFilter === 'technical'} onClick={() => handleFilterSelect('category', 'technical')}>Technical</MenuItem>,
+                      <MenuItem key="other" selected={categoryFilter === 'other'} onClick={() => handleFilterSelect('category', 'other')}>Other</MenuItem>,
+                    ]}
+                    {filterType === 'priority' && [
+                      <MenuItem key="all" selected={priorityFilter === ''} onClick={() => handleFilterSelect('priority', '')}>All</MenuItem>,
+                      <MenuItem key="low" selected={priorityFilter === 'low'} onClick={() => handleFilterSelect('priority', 'low')}>Low</MenuItem>,
+                      <MenuItem key="medium" selected={priorityFilter === 'medium'} onClick={() => handleFilterSelect('priority', 'medium')}>Medium</MenuItem>,
+                      <MenuItem key="high" selected={priorityFilter === 'high'} onClick={() => handleFilterSelect('priority', 'high')}>High</MenuItem>,
+                      <MenuItem key="very_high" selected={priorityFilter === 'very_high'} onClick={() => handleFilterSelect('priority', 'very_high')}>Very High</MenuItem>,
+                    ]}
+                    {filterType === 'status' && [
+                      <MenuItem key="all" selected={statusFilter === ''} onClick={() => handleFilterSelect('status', '')}>All</MenuItem>,
+                      <MenuItem key="open" selected={statusFilter === 'open'} onClick={() => handleFilterSelect('status', 'open')}>Open</MenuItem>,
+                      <MenuItem key="in_progress" selected={statusFilter === 'in_progress'} onClick={() => handleFilterSelect('status', 'in_progress')}>In Progress</MenuItem>,
+                      <MenuItem key="resolved" selected={statusFilter === 'resolved'} onClick={() => handleFilterSelect('status', 'resolved')}>Resolved</MenuItem>,
+                    ]}
+                  </Menu>
+                  <TableBody>
+                    {tickets.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center">No tickets found.</TableCell>
+                      </TableRow>
+                    )}
+                    {tickets
+                      .filter(ticket => (categoryFilter === '' || ticket.category === categoryFilter)
+                        && (priorityFilter === '' || ticket.priority === priorityFilter)
+                        && (statusFilter === '' || ticket.status === statusFilter)
+                        && (labelFilter.length === 0 || (ticket.labels && labelFilter.every(l => ticket.labels?.includes(l))))
+                        && (assignedToFilter === '' || (ticket.assignedTo && ticket.assignedTo._id === assignedToFilter))
+                        && (!searchTicket || ticket.title.toLowerCase().includes(searchTicket.toLowerCase()) || ticket.description.toLowerCase().includes(searchTicket.toLowerCase()))
+                      )
+                      .map(ticket => (
+                        <TableRow
+                          key={ticket._id}
+                          hover
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            '&:hover': {
+                              bgcolor: '#e3f2fd',
+                              transform: 'scale(1.01)',
+                              boxShadow: 2,
+                            },
+                            borderRadius: 2,
+                          }}
+                          onClick={() => navigate(`/tickets/${ticket._id}`)}
+                        >
+                          <TableCell>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Avatar sx={{ width: 28, height: 28, bgcolor: '#1976d2', fontSize: 15 }}>
+                                {ticket.assignedTo?.avatar ? <img src={ticket.assignedTo.avatar} alt="avatar" style={{ width: 28, height: 28, borderRadius: '50%' }} /> : (ticket.assignedTo?.username?.[0]?.toUpperCase() || ticket.title[0]?.toUpperCase())}
+                              </Avatar>
+                              <Typography fontWeight={600} fontSize={15} sx={{ color: 'var(--primary)' }}>{ticket.title}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Chip label={ticket.category ? ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1).replace('_', ' ') : '-'} size="small" sx={{ bgcolor: '#e3f2fd', color: '#1976d2', fontWeight: 700 }} />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={ticket.priority ? ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1).replace('_', ' ') : '-'}
+                              size="small"
+                              sx={{
+                                bgcolor:
+                                  ticket.priority === 'very_high' ? '#ff1744' :
+                                    ticket.priority === 'high' ? '#ff9100' :
+                                      ticket.priority === 'medium' ? '#2979ff' :
+                                        ticket.priority === 'low' ? '#00e676' : '#e3f2fd',
+                                color:
+                                  ticket.priority === 'low' ? '#222' : '#fff',
+                                fontWeight: 700
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={ticket.status.replace('_', ' ')}
+                              size="small"
+                              sx={{
+                                bgcolor:
+                                  ticket.status === 'open' ? '#fffde7' :
+                                    ticket.status === 'in_progress' ? '#e0f7fa' :
+                                      ticket.status === 'resolved' ? '#e3ffe3' : '#f5f7fa',
+                                color: '#222',
+                                fontWeight: 700,
+                                textTransform: 'capitalize',
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <AssignmentIndIcon sx={{ color: '#bdbdbd', fontSize: 18 }} />
+                              <Typography fontSize={14}>{ticket.assignedTo ? ticket.assignedTo.username : '-'}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <CalendarTodayIcon sx={{ color: '#bdbdbd', fontSize: 18 }} />
+                              <Typography fontSize={13}>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString() : '-'}</Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <ForumIcon sx={{ color: '#bdbdbd', fontSize: 18 }} />
+                              <Typography fontSize={14}>{ticket.replies?.length || 0}</Typography>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
           </>
         )}
         {activeSection === 'logs' && isSuperAdmin && (

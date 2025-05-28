@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+dotenv.config();
 import connectDB from './utils/db';
 import authRoutes from './routes/auth';
 import ticketRoutes from './routes/ticket';
@@ -12,7 +13,6 @@ import { addOnlineAdmin, removeOnlineAdmin } from './utils/onlineAdmins';
 import jwt from 'jsonwebtoken';
 import AdminChatMessage from './models/AdminChatMessage';
 
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
