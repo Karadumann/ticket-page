@@ -6,7 +6,6 @@ import Notification from '../models/Notification';
 import { PipelineStage } from 'mongoose';
 import { sendMail } from '../utils/sendMail';
 import { sendDiscordMessage } from '../utils/sendDiscordMessage';
-import { sendTelegramMessage } from '../utils/sendTelegramMessage';
 
 interface AuthRequest extends ExpressRequest {
   user?: any;
@@ -56,7 +55,7 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
         action: 'create_ticket',
         targetType: 'ticket',
         targetId: ticket._id,
-        details: { title, description, nickname, category, priority, labels: Array.isArray(labels) ? labels.filter((l: string) => !!l) : [] },
+        details: { ticketId: ticket._id, title, description, nickname, category, priority, labels: Array.isArray(labels) ? labels.filter((l: string) => !!l) : [] },
       });
     }
     const ticketId = (ticket as any)._id?.toString();
@@ -129,9 +128,6 @@ export const replyTicket = async (req: AuthRequest, res: Response) => {
         if (user.notificationPreferences.discord && user.discordId) {
           sendDiscordMessage(user.discordId, `Your ticket "${ticket.title}" received a new reply.\n\nView: ${url}`).catch(() => {});
         }
-        if (user.notificationPreferences.telegram && user.telegramId) {
-          sendTelegramMessage(user.telegramId, `Your ticket "${ticket.title}" received a new reply.\n\nView: ${url}`).catch(() => {});
-        }
       }
     }
     // Notify all admins except the replier
@@ -152,7 +148,7 @@ export const replyTicket = async (req: AuthRequest, res: Response) => {
         action: 'reply_ticket',
         targetType: 'ticket',
         targetId: ticket._id,
-        details: { message },
+        details: { ticketId: ticket._id, message },
       });
     }
     const ticketId = (ticket as any)._id?.toString();
@@ -234,9 +230,6 @@ export const updateTicketStatus = async (req: any, res: any) => {
         if (user.notificationPreferences.discord && user.discordId) {
           sendDiscordMessage(user.discordId, `The status of your ticket "${ticket.title}" changed to ${status}.\n\nView: ${url}`).catch(() => {});
         }
-        if (user.notificationPreferences.telegram && user.telegramId) {
-          sendTelegramMessage(user.telegramId, `The status of your ticket "${ticket.title}" changed to ${status}.\n\nView: ${url}`).catch(() => {});
-        }
       }
     }
     const admins = await (await import('../models/User')).default.find({ role: { $in: ['admin', 'superadmin', 'moderator', 'staff'] } });
@@ -290,7 +283,7 @@ export const deleteTicket = async (req: any, res: any) => {
         action: 'delete_ticket',
         targetType: 'ticket',
         targetId: id,
-        details: { title: ticket.title, user: ticket.user },
+        details: { ticketId: id, title: ticket.title, user: ticket.user },
       });
     }
     res.json({ message: 'Ticket deleted.' });
@@ -320,7 +313,7 @@ export const getTicketByIdAdmin = async (req: AuthRequest, res: Response) => {
         action: 'view_ticket',
         targetType: 'ticket',
         targetId: ticket._id,
-        details: { title: ticket.title, user: ticket.user },
+        details: { ticketId: ticket._id, title: ticket.title, user: ticket.user },
       });
     }
     res.json(ticket);
@@ -393,7 +386,7 @@ export const updateTicket = async (req: any, res: any) => {
         action: 'update_ticket',
         targetType: 'ticket',
         targetId: id,
-        details: update,
+        details: { ticketId: id, ...update },
       });
     }
     const updatedTicket2 = await Ticket.findById(id);

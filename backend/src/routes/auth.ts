@@ -25,6 +25,7 @@ router.patch('/me', authMiddleware, async (req: any, res) => {
     if (req.body.username) update.username = req.body.username;
     if (req.body.email) update.email = req.body.email;
     if (req.body.avatar !== undefined) update.avatar = req.body.avatar;
+    if (req.body.notificationPreferences !== undefined) update.notificationPreferences = req.body.notificationPreferences;
     if (req.body.password && req.body.newPassword) {
       const user = await User.findById(req.user.id);
       if (!user) return res.status(404).json({ message: 'User not found.' });

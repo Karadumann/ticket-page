@@ -75,12 +75,10 @@ io.on('connection', (socket) => {
     if (!userId || !["admin", "superadmin", "staff", "moderator"].includes(role)) return;
     socket.join('admin-chat');
     socket.data.adminChatUser = { userId, username, role };
-    // Son 30 mesajı MongoDB'den çek
     const lastMessages = await AdminChatMessage.find({}).sort({ timestamp: -1 }).limit(30).lean();
     socket.emit('admin-chat-history', lastMessages.reverse());
   });
 
-  // Admin chat mesajı
   socket.on('admin-chat-message', async ({ message }) => {
     const user = socket.data.adminChatUser;
     console.log('admin-chat-message user:', user); // debug
@@ -133,7 +131,7 @@ app.use(express.json());
 
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100, // 1 IP in 1 minute can make 100 requests
+  max: 1000, // 1 IP in 1 minute can make 100 requests
   message: { message: 'Too many requests. Please try again later.' }
 });
 

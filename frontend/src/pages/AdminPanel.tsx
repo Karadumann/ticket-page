@@ -645,19 +645,7 @@ const AdminPanel: React.FC = () => {
     return (
       <div
         ref={setNodeRef}
-        style={{
-          minHeight: 200,
-          flex: 1,
-          minWidth: { xs: 260, xl: 340 },
-          maxWidth: { xs: 320, xl: 400 },
-          background: isOver ? '#e3f2fd' : '#f7fafc',
-          margin: 8,
-          borderRadius: 8,
-          padding: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          transition: 'background 0.2s',
-        }}
+        style={{ minHeight: 200, flex: 1, minWidth: 260, maxWidth: 400, background: isOver ? '#e3f2fd' : '#f7fafc', margin: 8, borderRadius: 8, padding: 8, display: 'flex', flexDirection: 'column', transition: 'background 0.2s' }}
         id={col.key}
       >
         <Typography variant="subtitle1" fontWeight={700} align="center" mb={2} sx={{ color: 'var(--primary)', fontSize: { xs: 15, md: 18 } }}>{col.label}</Typography>
@@ -1428,35 +1416,51 @@ const LogsPage: React.FC<{ admins: User[] }> = ({ admins }) => {
               </tr>
             </thead>
             <tbody>
-              {logs.map((log, idx) => (
-                <tr key={log._id || idx} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: 8 }}>{log.action?.replace(/_/g, ' ').toUpperCase()}</td>
-                  <td style={{ padding: 8 }}>{getUsername(log.user?.id || '', admins)}</td>
-                  <td style={{ padding: 8 }}>{log.user?.role || '-'}</td>
-                  <td style={{ padding: 8 }}>
-                    {log.date || log.createdAt || log.timestamp
-                      ? new Date(log.date || log.createdAt || log.timestamp).toLocaleString()
-                      : '-'}
-                  </td>
-                  <td style={{ padding: 8, fontFamily: 'monospace', fontSize: 13, color: '#555', maxWidth: 400, overflow: 'auto' }}>
-                    {(() => {
-                      let ticketId = null;
-                      if (log.details) {
-                        ticketId = log.details.ticketId || log.details.ticket || log.details.id;
-                      }
-                      if (ticketId) {
-                        return (
-                          <span>
-                            <span style={{ fontWeight: 700, color: '#1976d2', marginRight: 8 }}>Ticket: </span>
-                            <a href={`/tickets/${ticketId}`} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>View Ticket</a>
-                          </span>
-                        );
-                      }
-                      return <span />;
-                    })()}
-                  </td>
-                </tr>
-              ))}
+              {logs.map((log, idx) => {
+                // User info
+                let userDisplay = '-';
+                if (log.user) {
+                  if (typeof log.user === 'object') {
+                    userDisplay = `${log.user.username || ''} (${log.user.email || log.user._id || ''})`;
+                  } else {
+                    userDisplay = log.user;
+                  }
+                }
+                // Details rendering
+                let ticketId = null;
+                let detailsString = '';
+                if (log.details) {
+                  ticketId = log.details.ticketId || log.details.ticket || log.details.id;
+                  try {
+                    detailsString = JSON.stringify(log.details, null, 2);
+                  } catch {
+                    detailsString = String(log.details);
+                  }
+                }
+                return (
+                  <tr key={log._id || idx} style={{ borderBottom: '1px solid #eee' }}>
+                    <td style={{ padding: 8 }}>{log.action?.replace(/_/g, ' ').toUpperCase()}</td>
+                    <td style={{ padding: 8 }}>{userDisplay}</td>
+                    <td style={{ padding: 8 }}>{log.user?.role || (typeof log.user === 'object' ? log.user.role : '-')}</td>
+                    <td style={{ padding: 8 }}>
+                      {log.date || log.createdAt || log.timestamp
+                        ? new Date(log.date || log.createdAt || log.timestamp).toLocaleString()
+                        : '-'}
+                    </td>
+                    <td style={{ padding: 8, fontFamily: 'monospace', fontSize: 13, color: '#555', maxWidth: 400, overflow: 'auto', whiteSpace: 'pre-line' }}>
+                      {ticketId ? (
+                        <a href={`/tickets/${ticketId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', fontWeight: 700 }}>
+                          View Ticket
+                        </a>
+                      ) : (
+                        <span title={detailsString.length > 200 ? detailsString : undefined} style={{ display: 'inline-block', maxWidth: 380, overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'top' }}>
+                          {detailsString.length > 200 ? detailsString.slice(0, 200) + '...' : detailsString}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </Box>

@@ -75,7 +75,7 @@ const Header: React.FC<HeaderProps> = ({ activeSection, onSectionChange, isSuper
             boxShadow: activeSection === 'users' ? '0 2px 12px 0 var(--primary)' : 'none',
             '&:hover': { bgcolor: 'var(--primary)', color: 'var(--primary-foreground)' }
           }}
-          onClick={() => onSectionChange('users')}
+          onClick={() => navigate('/admin?section=users')}
         >
           Users
         </Button>
