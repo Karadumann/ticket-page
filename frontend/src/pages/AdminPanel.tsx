@@ -118,30 +118,36 @@ const AdminPanel: React.FC = () => {
   const [activeSection, setActiveSection] = useState<'dashboard' | 'users' | 'tickets' | 'logs'>(() => {
     if (location.pathname.startsWith('/dashboard') || location.pathname === '/') return 'dashboard';
     if (location.pathname.startsWith('/admin')) {
-      // Varsayılanı tickets yap
+      const params = new URLSearchParams(location.search);
+      const section = params.get('section');
+      if (section === 'users' || section === 'tickets' || section === 'logs') return section;
       return 'tickets';
     }
     return 'dashboard';
   });
-  let userId = '';
+  const [userId, setUserId] = useState<string>('');
   const [labelFilter, setLabelFilter] = useState<string[]>([]);
   const [assignedToFilter, setAssignedToFilter] = useState<string>('');
+  const [hasNewTickets, setHasNewTickets] = useState(false);
+  const [newTicketCount, setNewTicketCount] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
       setIsAdmin(false);
       setIsSuperAdmin(false);
+      setUserId('');
       return;
     }
     try {
       const decoded = jwtDecode<DecodedToken>(token);
       setIsAdmin(decoded.role === 'admin' || decoded.role === 'superadmin' || decoded.role === 'staff' || decoded.role === 'moderator');
       setIsSuperAdmin(decoded.role === 'superadmin');
-      userId = decoded.id || decoded._id || '';
+      setUserId(decoded.id || decoded._id || '');
     } catch {
       setIsAdmin(false);
       setIsSuperAdmin(false);
+      setUserId('');
     }
   }, []);
 
@@ -358,7 +364,6 @@ const AdminPanel: React.FC = () => {
   };
 
   const openCount = tickets.filter(t => t.status === 'open').length;
-  const closedCount = tickets.filter(t => t.status === 'closed').length;
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -366,6 +371,8 @@ const AdminPanel: React.FC = () => {
     socket.on('new-ticket', (ticket: Ticket) => {
       setTickets(prev => [ticket, ...prev]);
       setTotalTickets(prev => prev + 1);
+      setHasNewTickets(true);
+      setNewTicketCount(prev => prev + 1);
       toast.info('A new ticket has arrived!');
     });
     return () => {
@@ -417,7 +424,6 @@ const AdminPanel: React.FC = () => {
     { key: 'open', label: 'Open' },
     { key: 'in_progress', label: 'In Progress' },
     { key: 'resolved', label: 'Resolved' },
-    { key: 'closed', label: 'Closed' },
   ];
   const ticketsByStatus = columns.reduce((acc, col) => {
     acc[col.key] = tickets.filter(ticket => ticket.status === col.key &&
@@ -645,12 +651,12 @@ const AdminPanel: React.FC = () => {
     return (
       <div
         ref={setNodeRef}
-        style={{ minHeight: 200, flex: 1, minWidth: 260, maxWidth: 400, background: isOver ? '#e3f2fd' : '#f7fafc', margin: 8, borderRadius: 8, padding: 8, display: 'flex', flexDirection: 'column', transition: 'background 0.2s' }}
+        style={{ minHeight: 200, flex: 1, minWidth: 340, maxWidth: 480, background: isOver ? '#e3f2fd' : '#f7fafc', margin: 8, borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', transition: 'background 0.2s' }}
         id={col.key}
       >
-        <Typography variant="subtitle1" fontWeight={700} align="center" mb={2} sx={{ color: 'var(--primary)', fontSize: { xs: 15, md: 18 } }}>{col.label}</Typography>
+        <Typography variant="subtitle1" fontWeight={700} align="center" mb={2} sx={{ color: 'var(--primary)', fontSize: { xs: 17, md: 20 } }}>{col.label}</Typography>
         {tickets.length === 0 && (
-          <Typography color="text.secondary" align="center" sx={{ fontSize: { xs: 13, md: 15 } }}>No tickets</Typography>
+          <Typography color="text.secondary" align="center" sx={{ fontSize: { xs: 14, md: 16 } }}>No tickets</Typography>
         )}
         {children}
       </div>
@@ -664,6 +670,18 @@ const AdminPanel: React.FC = () => {
     else if (section === 'tickets') navigate('/admin?section=tickets');
     else if (section === 'logs') navigate('/admin?section=logs');
   };
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin')) {
+      const params = new URLSearchParams(location.search);
+      const section = params.get('section');
+      if (section === 'users' || section === 'tickets' || section === 'logs') {
+        setActiveSection(section);
+      } else {
+        setActiveSection('tickets');
+      }
+    }
+  }, [location.pathname, location.search]);
 
   useEffect(() => {
     if (location.pathname.startsWith('/admin') && activeSection === 'tickets') {
@@ -711,9 +729,7 @@ const AdminPanel: React.FC = () => {
             </IconButton>
             <Box display="flex" alignItems="center" gap={2}>
               {isAdmin && <NotificationBell userId={userId} sx={{ color: '#23232b', '&:hover': { bgcolor: '#e3f2fd' } }} />}
-              <Button onClick={handleLogout} sx={{ minWidth: 0, borderRadius: '50%', p: 1, bgcolor: '#ff5252', color: '#fff', boxShadow: 2, zIndex: 10, '&:hover': { bgcolor: '#d32f2f', color: '#fff' } }}>
-                <LogoutIcon fontSize="large" />
-              </Button>
+              {/* Logout button removed from here */}
             </Box>
           </Box>
           <Drawer anchor="left" open={sidebarOpen} onClose={() => setSidebarOpen(false)}>
@@ -728,7 +744,7 @@ const AdminPanel: React.FC = () => {
           <Box sx={{ pt: 8 }} />
         </>
       ) : (
-        <Header activeSection={activeSection} onSectionChange={handleSectionChange} isSuperAdmin={isSuperAdmin} />
+        <Header activeSection={activeSection} onSectionChange={handleSectionChange} isAdmin onLogout={handleLogout} userId={userId} />
       )}
       {/* Main Content */}
       <Box
@@ -759,16 +775,7 @@ const AdminPanel: React.FC = () => {
         }}
       >
         {/* Notification Bell ve Logout aynı hizada */}
-        {!isMobile && (
-          <Box display="flex" alignItems="center" justifyContent="flex-end" width="100%" mt={4} mb={4} gap={2}>
-            {isAdmin && (
-              <NotificationBell userId={userId} sx={{ color: '#23232b', '&:hover': { bgcolor: '#e3f2fd' } }} />
-            )}
-            <Button onClick={handleLogout} sx={{ minWidth: 0, borderRadius: '50%', p: 1, bgcolor: '#ff5252', color: '#fff', boxShadow: 2, zIndex: 10, '&:hover': { bgcolor: '#d32f2f', color: '#fff' } }}>
-              <LogoutIcon fontSize="large" />
-            </Button>
-          </Box>
-        )}
+        {/* NotificationBell removed from here, now only in Header */}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         {onlineAdmins.length > 0 && (
           <Box display="flex" alignItems="center" gap={2} mb={2} sx={{ bgcolor: '#e8f5e9', borderRadius: 2, px: 2, py: 1, minHeight: 48 }}>
@@ -782,7 +789,7 @@ const AdminPanel: React.FC = () => {
           </Box>
         )}
         {/* Responsive kartlar ve kolonlar */}
-        <Box display="flex" justifyContent="center" alignItems="center" gap={{ xs: 1, sm: 2, md: 3, xl: 4, '2xl': 6, '4xl': 8, '8xl': 12, '16xl': 24 }} mb={4} mt={2} flexWrap="wrap">
+        <Box display="flex" justifyContent="center" alignItems="flex-start" gap={{ xs: 2, sm: 3, md: 4, xl: 6 }} mb={4} mt={2} flexWrap="nowrap" width="100%">
           <Paper elevation={3} sx={{ p: { xs: 2, sm: 2.5, md: 3, xl: 4, '2xl': 6, '4xl': 8, '8xl': 12, '16xl': 24 }, minWidth: 120, maxWidth: { xs: '100%', sm: 220, md: 260, xl: 320, '2xl': 400, '4xl': 600, '8xl': 900, '16xl': 1800 }, textAlign: 'center', bgcolor: '#e3f2fd', flex: '1 1 160px', m: 0.5 }}>
             <Typography variant="subtitle2" color="primary">Total</Typography>
             <Typography variant="h5" fontWeight={700}>{totalTickets}</Typography>
@@ -798,10 +805,6 @@ const AdminPanel: React.FC = () => {
           <Paper elevation={3} sx={{ p: { xs: 2, sm: 2.5, md: 3, xl: 4, '2xl': 6, '4xl': 8, '8xl': 12, '16xl': 24 }, minWidth: 120, maxWidth: { xs: '100%', sm: 220, md: 260, xl: 320, '2xl': 400, '4xl': 600, '8xl': 900, '16xl': 1800 }, textAlign: 'center', bgcolor: '#e3ffe3', flex: '1 1 160px', m: 0.5 }}>
             <Typography variant="subtitle2" color="primary">Resolved</Typography>
             <Typography variant="h5" fontWeight={700}>{tickets.filter(t => t.status === 'resolved').length}</Typography>
-          </Paper>
-          <Paper elevation={3} sx={{ p: { xs: 2, sm: 2.5, md: 3, xl: 4, '2xl': 6, '4xl': 8, '8xl': 12, '16xl': 24 }, minWidth: 120, maxWidth: { xs: '100%', sm: 220, md: 260, xl: 320, '2xl': 400, '4xl': 600, '8xl': 900, '16xl': 1800 }, textAlign: 'center', bgcolor: '#e0f2f1', flex: '1 1 160px', m: 0.5 }}>
-            <Typography variant="subtitle2" color="primary">Closed</Typography>
-            <Typography variant="h5" fontWeight={700}>{closedCount}</Typography>
           </Paper>
         </Box>
         {activeSection === 'users' && (
@@ -911,7 +914,6 @@ const AdminPanel: React.FC = () => {
                   <MenuItem value="open">Open</MenuItem>
                   <MenuItem value="in_progress">In Progress</MenuItem>
                   <MenuItem value="resolved">Resolved</MenuItem>
-                  <MenuItem value="closed">Closed</MenuItem>
                 </TextField>
                 <Autocomplete
                   multiple
@@ -1187,7 +1189,6 @@ const AdminPanel: React.FC = () => {
               <option value="open">Open</option>
               <option value="in_progress">In Progress</option>
               <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
             </TextField>
             {(editTicketFields.screenshotUrls || ['']).map((url: string, idx: number) => (
               <Box key={idx} display="flex" alignItems="center" gap={1} mb={1}>
@@ -1262,6 +1263,20 @@ const AdminPanel: React.FC = () => {
             }}>Save</Button>
           </DialogActions>
         </Dialog>
+        {hasNewTickets && (
+          <Box display="flex" justifyContent="center" alignItems="center" my={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => {
+                setHasNewTickets(false);
+                setNewTicketCount(0);
+              }}
+            >
+              {newTicketCount > 20 ? '20+ new tickets' : `${newTicketCount} new ticket${newTicketCount > 1 ? 's' : ''}`} - Show
+            </Button>
+          </Box>
+        )}
       </Box>
       <AdminChat />
     </>

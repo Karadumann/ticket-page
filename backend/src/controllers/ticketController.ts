@@ -60,6 +60,28 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
     }
     const ticketId = (ticket as any)._id?.toString();
     io.to(ticketId).emit('ticket-updated', ticket);
+    if (req.user) {
+      const user = await (await import('../models/User')).default.findById(req.user.id);
+      const muted = user?.notificationPreferences?.discordMuted;
+      const muteUntil = user?.notificationPreferences?.discordMuteUntil;
+      const now = new Date();
+      const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
+      if (user && user.notificationPreferences?.discord && user.discordId && !isMuted) {
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}`;
+        sendDiscordMessage(user.discordId, {
+          type: 'created',
+          description: `Your ticket **${ticket.title}** has been created.`,
+          url,
+          buttonLabel: 'View Ticket',
+          timestamp: ticket.createdAt || new Date(),
+          ticketId: ticket._id?.toString(),
+          category: ticket.category,
+          priority: ticket.priority,
+          createdAt: ticket.createdAt,
+          avatarUrl: user.avatar || undefined
+        }).catch(() => {});
+      }
+    }
     res.status(201).json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
@@ -126,7 +148,29 @@ export const replyTicket = async (req: AuthRequest, res: Response) => {
           }).catch(() => {});
         }
         if (user.notificationPreferences.discord && user.discordId) {
-          sendDiscordMessage(user.discordId, `Your ticket "${ticket.title}" received a new reply.\n\nView: ${url}`).catch(() => {});
+          const muted = user?.notificationPreferences?.discordMuted;
+          const muteUntil = user?.notificationPreferences?.discordMuteUntil;
+          const now = new Date();
+          const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
+          if (!isMuted) {
+            const replier = await (await import('../models/User')).default.findById(req.user.id);
+            sendDiscordMessage(user.discordId, {
+              type: 'reply',
+              description: `**${replier?.username || 'Someone'}** replied to your ticket **${ticket.title}**.\n\nTo see the reply, click the button below.`,
+              url,
+              buttonLabel: 'View Ticket',
+              fields: [
+                { name: 'Replied By', value: replier?.username || 'Unknown', inline: true },
+                { name: 'Date', value: new Date().toLocaleString(), inline: true }
+              ],
+              timestamp: new Date(),
+              ticketId: ticket._id?.toString(),
+              category: ticket.category,
+              priority: ticket.priority,
+              createdAt: ticket.createdAt,
+              avatarUrl: replier?.avatar || undefined
+            }).catch(() => {});
+          }
         }
       }
     }
@@ -202,7 +246,7 @@ export const updateTicketStatus = async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const validStatuses = ['open', 'in_progress', 'resolved', 'closed'];
+    const validStatuses = ['open', 'in_progress', 'resolved'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Invalid status.' });
     }
@@ -228,7 +272,37 @@ export const updateTicketStatus = async (req: any, res: any) => {
           }).catch(() => {});
         }
         if (user.notificationPreferences.discord && user.discordId) {
-          sendDiscordMessage(user.discordId, `The status of your ticket "${ticket.title}" changed to ${status}.\n\nView: ${url}`).catch(() => {});
+          const muted = user?.notificationPreferences?.discordMuted;
+          const muteUntil = user?.notificationPreferences?.discordMuteUntil;
+          const now = new Date();
+          const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
+          if (!isMuted) {
+            sendDiscordMessage(user.discordId, {
+              type: 'status',
+              description: `The status of your ticket **${ticket.title}** changed to **${status}**.`,
+              url,
+              buttonLabel: 'View Ticket',
+              timestamp: new Date(),
+              ticketId: ticket._id?.toString(),
+              category: ticket.category,
+              priority: ticket.priority,
+              createdAt: ticket.createdAt
+            }).catch(() => {});
+            if (status === 'resolved') {
+              sendDiscordMessage(user.discordId, {
+                type: 'status',
+                title: 'How satisfied are you with the support?',
+                description: 'Your ticket has been resolved. Please rate your experience and leave a comment if you wish.',
+                url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}?survey=1`,
+                buttonLabel: 'Rate Support',
+                timestamp: new Date(),
+                ticketId: ticket._id?.toString(),
+                category: ticket.category,
+                priority: ticket.priority,
+                createdAt: ticket.createdAt
+              }).catch(() => {});
+            }
+          }
         }
       }
     }
@@ -285,6 +359,24 @@ export const deleteTicket = async (req: any, res: any) => {
         targetId: id,
         details: { ticketId: id, title: ticket.title, user: ticket.user },
       });
+    }
+    if (ticket && ticket.user) {
+      const user = await (await import('../models/User')).default.findById(ticket.user);
+      const muted = user?.notificationPreferences?.discordMuted;
+      const muteUntil = user?.notificationPreferences?.discordMuteUntil;
+      const now = new Date();
+      const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
+      if (user && user.notificationPreferences?.discord && user.discordId && !isMuted) {
+        sendDiscordMessage(user.discordId, {
+          type: 'deleted',
+          description: `Your ticket **${ticket.title}** was deleted.`,
+          timestamp: new Date(),
+          ticketId: ticket._id?.toString(),
+          category: ticket.category,
+          priority: ticket.priority,
+          createdAt: ticket.createdAt
+        }).catch(() => {});
+      }
     }
     res.json({ message: 'Ticket deleted.' });
   } catch (err) {
@@ -366,7 +458,7 @@ export const updateTicket = async (req: any, res: any) => {
       update.screenshotUrls = screenshotUrls.filter((url: string) => !!url);
     }
     if (status) {
-      const validStatuses = ['open', 'in_progress', 'resolved', 'closed'];
+      const validStatuses = ['open', 'in_progress', 'resolved'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ message: 'Invalid status.' });
       }
@@ -410,8 +502,8 @@ export const submitSatisfactionSurvey = async (req: any, res: any) => {
     if (String(ticket.user) !== req.user.id) {
       return res.status(403).json({ message: 'You are not allowed to submit a survey for this ticket.' });
     }
-    if (ticket.status !== 'closed') {
-      return res.status(400).json({ message: 'Survey can only be submitted after the ticket is closed.' });
+    if (ticket.status !== 'resolved') {
+      return res.status(400).json({ message: 'Survey can only be submitted after the ticket is resolved.' });
     }
     if (ticket.satisfactionSurvey) {
       return res.status(400).json({ message: 'Survey already submitted for this ticket.' });
@@ -462,6 +554,26 @@ export const assignTicket = async (req: any, res: any) => {
     const updatedTicket3 = await Ticket.findById(id);
     const ticketId = (updatedTicket3 as any)._id?.toString();
     io.to(ticketId).emit('ticket-updated', updatedTicket3);
+    if (user && user.notificationPreferences?.discord && user.discordId) {
+      const muted = user?.notificationPreferences?.discordMuted;
+      const muteUntil = user?.notificationPreferences?.discordMuteUntil;
+      const now = new Date();
+      const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
+      if (!isMuted) {
+        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${updatedTicket._id}`;
+        sendDiscordMessage(user.discordId, {
+          type: 'assigned',
+          description: `A ticket has been assigned to you: **${updatedTicket.title}**.`,
+          url,
+          buttonLabel: 'View Ticket',
+          timestamp: new Date(),
+          ticketId: updatedTicket._id?.toString(),
+          category: updatedTicket.category,
+          priority: updatedTicket.priority,
+          createdAt: updatedTicket.createdAt
+        }).catch(() => {});
+      }
+    }
     res.json(updatedTicket);
   } catch (err) {
     res.status(500).json({ message: 'Failed to assign ticket.' });
@@ -478,7 +590,6 @@ export const getAnalyticsSummary = async (req: any, res: any) => {
     // Açık, bekleyen, kapalı ticket sayısı
     const open = await Ticket.countDocuments({ status: 'open' });
     const pending = await Ticket.countDocuments({ status: 'in_progress' });
-    const closed = await Ticket.countDocuments({ status: 'closed' });
     // Ortalama çözülme süresi (sadece resolved ticketlar)
     const resolvedTickets = await Ticket.find({ status: 'resolved' }, 'createdAt updatedAt');
     let avgResolution = 0;
@@ -501,7 +612,7 @@ export const getAnalyticsSummary = async (req: any, res: any) => {
       { $project: { name: '$admin.username', count: 1 } }
     ];
     const topAdmins = await Ticket.aggregate(pipeline);
-    res.json({ total, resolved, avgResolution, topAdmins, open, pending, closed });
+    res.json({ total, resolved, avgResolution, topAdmins, open, pending });
   } catch (err) {
     res.status(500).json({ message: 'Failed to fetch analytics summary.' });
   }
@@ -590,7 +701,7 @@ export const getStatusTrend = async (req: any, res: any) => {
         date: new Date(d.getFullYear(), d.getMonth(), d.getDate())
       });
     }
-    const statuses = ['open', 'in_progress', 'resolved', 'closed'];
+    const statuses = ['open', 'in_progress', 'resolved'];
     const trend = await Promise.all(days.map(async (day) => {
       const start = day.date;
       const end = new Date(day.date);

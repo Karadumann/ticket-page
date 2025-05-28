@@ -3,7 +3,7 @@ import { Box, Typography, Paper, CircularProgress, Alert, Grid } from '@mui/mate
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import Header from '../components/Header';
+import Header, { UserHeader } from '../components/Header';
 import Avatar from '@mui/material/Avatar';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -28,6 +28,8 @@ const Dashboard: React.FC = () => {
   const [statusTrend, setStatusTrend] = useState([]);
   const [topUsers, setTopUsers] = useState([]);
   const [oldOpenTickets, setOldOpenTickets] = useState([]);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -38,6 +40,8 @@ const Dashboard: React.FC = () => {
         const token = localStorage.getItem('token');
         if (token) {
           const decoded: any = jwtDecode(token);
+          setIsAdmin(["admin", "superadmin", "staff", "moderator"].includes(decoded.role));
+          setUserId(decoded.id || decoded._id || '');
           setIsSuperAdmin(decoded.role === 'superadmin');
         }
         const [summaryRes, trendRes] = await Promise.all([
@@ -86,6 +90,11 @@ const Dashboard: React.FC = () => {
     else if (section === 'logs') navigate('/admin?section=logs');
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+  };
+
   if (loading) return <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh"><CircularProgress /></Box>;
   if (error) return <Alert severity="error" sx={{ my: 4 }}>{error}</Alert>;
   if (!summary) return null;
@@ -103,7 +112,11 @@ const Dashboard: React.FC = () => {
 
   return (
     <>
-      <Header activeSection="dashboard" onSectionChange={handleSectionChange} isSuperAdmin={isSuperAdmin} />
+      {isAdmin ? (
+        <Header activeSection="dashboard" onSectionChange={handleSectionChange} isAdmin userId={userId} onLogout={handleLogout} />
+      ) : (
+        <UserHeader username={adminName} avatar={adminAvatar} />
+      )}
       <Box sx={{ width: '100%', maxWidth: 1400, mx: 'auto', py: 4, px: { xs: 1, md: 4 }, pt: { xs: 8, md: 10 } }}>
         {/* Welcome and avatar */}
         <Box display="flex" alignItems="center" gap={2} mb={3}>
@@ -146,7 +159,7 @@ const Dashboard: React.FC = () => {
               <Typography variant="body2">{summary.topAdmins?.[0]?.count || 0} ticket</Typography>
             </Paper>
           </Grid>
-          {/* Extra: Open, Pending, Closed tickets if available */}
+          {/* Extra: Open, Pending tickets if available */}
           {summary.open !== undefined && (
             <Grid sx={{ width: { xs: '100%', sm: '33.33%', md: '16.66%' } }}>
               <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#e3f2fd', boxShadow: 1 }}>
@@ -162,15 +175,6 @@ const Dashboard: React.FC = () => {
                 <HourglassEmptyIcon sx={{ color: '#fbc02d', fontSize: 28, mb: 0.5 }} />
                 <Typography variant="subtitle2" color="text.secondary">Pending</Typography>
                 <Typography variant="h6" fontWeight={700}>{summary.pending}</Typography>
-              </Paper>
-            </Grid>
-          )}
-          {summary.closed !== undefined && (
-            <Grid sx={{ width: { xs: '100%', sm: '33.33%', md: '16.66%' } }}>
-              <Paper sx={{ p: 2, textAlign: 'center', bgcolor: '#fbe9e7', boxShadow: 1 }}>
-                <DoneAllIcon sx={{ color: '#d84315', fontSize: 28, mb: 0.5 }} />
-                <Typography variant="subtitle2" color="text.secondary">Closed</Typography>
-                <Typography variant="h6" fontWeight={700}>{summary.closed}</Typography>
               </Paper>
             </Grid>
           )}
@@ -311,7 +315,6 @@ const Dashboard: React.FC = () => {
               <MultiLine type="monotone" dataKey="open" stroke="#1976d2" strokeWidth={2} name="Open" />
               <MultiLine type="monotone" dataKey="in_progress" stroke="#fbc02d" strokeWidth={2} name="Pending" />
               <MultiLine type="monotone" dataKey="resolved" stroke="#43a047" strokeWidth={2} name="Resolved" />
-              <MultiLine type="monotone" dataKey="closed" stroke="#d84315" strokeWidth={2} name="Closed" />
             </MultiLineChart>
           </ResponsiveContainer>
         </Paper>

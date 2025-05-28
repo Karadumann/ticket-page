@@ -236,7 +236,7 @@ const TicketDetail: React.FC = () => {
     } catch {}
   }
   const isTicketOwner = ticket && ticket.user === currentUserId && currentUserRole === 'user';
-  const canShowSurveyButton = ticket && ticket.status === 'closed' && !ticket.satisfactionSurvey && isTicketOwner;
+  const canShowSurveyButton = ticket && ticket.status === 'resolved' && !ticket.satisfactionSurvey && isTicketOwner;
 
   // Determine if another admin is typing
   const otherAdminTyping = isAdmin && typers.length > 0 && !typers.some(v => v.userId === currentUserId);
@@ -475,7 +475,6 @@ const TicketDetail: React.FC = () => {
                         <MenuItem value="open">Open</MenuItem>
                         <MenuItem value="in_progress">In Progress</MenuItem>
                         <MenuItem value="resolved">Resolved</MenuItem>
-                        <MenuItem value="closed">Closed</MenuItem>
                       </Select>
                     </FormControl>
                   ) : (
@@ -725,7 +724,7 @@ const TicketDetail: React.FC = () => {
                 Give Satisfaction Survey
               </Button>
             )}
-            {ticket.status === 'closed' && ticket.satisfactionSurvey && (
+            {ticket.status === 'resolved' && ticket.satisfactionSurvey && (
               <Box mt={2}>
                 <Typography variant="h6" mb={2}>Satisfaction Survey</Typography>
                 <Typography><b>Rating:</b> {ticket.satisfactionSurvey.rating} / 5</Typography>

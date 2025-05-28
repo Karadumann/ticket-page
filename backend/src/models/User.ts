@@ -9,6 +9,8 @@ export interface IUser extends Document {
   notificationPreferences?: {
     email: boolean;
     discord: boolean;
+    discordMuted?: boolean;
+    discordMuteUntil?: Date | null;
   };
   discordId?: string;
   discordUsername?: string;
@@ -23,6 +25,8 @@ const UserSchema: Schema = new Schema({
   notificationPreferences: {
     email: { type: Boolean, default: true },
     discord: { type: Boolean, default: false },
+    discordMuted: { type: Boolean, default: false },
+    discordMuteUntil: { type: Date, default: null },
   },
   discordId: { type: String, default: null },
   discordUsername: { type: String, default: null },

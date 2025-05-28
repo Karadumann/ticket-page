@@ -3,9 +3,12 @@ import { Box, Typography, Paper, TextField, Button, Alert, Snackbar, Checkbox, F
 import Avatar from '@mui/material/Avatar';
 import { useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import Header from '../components/Header';
+import Header, { UserHeader } from '../components/Header';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import { IconButton as MuiIconButton } from '@mui/material';
+import { Alert as MuiAlert } from '@mui/material';
+import { jwtDecode } from 'jwt-decode';
+import NotificationBell from '../components/NotificationBell';
 
 interface UserProfile {
   username: string;
@@ -14,6 +17,8 @@ interface UserProfile {
   notificationPreferences?: {
     email: boolean;
     discord: boolean;
+    discordMuted?: boolean;
+    discordMuteUntil?: string | null;
   };
   discordId?: string;
   discordUsername?: string;
@@ -28,6 +33,9 @@ const Profile: React.FC = () => {
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({ open: false, message: '', severity: 'success' });
   const [updating, setUpdating] = useState<{ avatar?: boolean; username?: boolean; email?: boolean; password?: boolean; notification?: boolean; discord?: boolean }>({});
   const [userId, setUserId] = useState<string>('');
+  const [muteDialogOpen, setMuteDialogOpen] = useState(false);
+  const [muteDuration, setMuteDuration] = useState<'60' | '1440' | 'forever'>('60');
+  const [isAdmin, setIsAdmin] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -43,6 +51,14 @@ const Profile: React.FC = () => {
         }
       } catch {}
     };
+    // Admin kontrolü
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded: any = jwtDecode(token);
+        setIsAdmin(["admin", "superadmin", "staff", "moderator"].includes(decoded.role));
+      } catch {}
+    }
     fetchProfile();
   }, []);
 
@@ -189,7 +205,16 @@ const Profile: React.FC = () => {
       } else {
         setMsg('Notification preferences updated!');
         setSnackbar({ open: true, message: 'Notification preferences updated!', severity: 'success' });
-        setProfile(p => ({ ...p, notificationPreferences: data.notificationPreferences }));
+        setProfile(p => ({
+          ...p,
+          notificationPreferences: {
+            email: p.notificationPreferences?.email ?? false,
+            discord: p.notificationPreferences?.discord ?? false,
+            ...p.notificationPreferences,
+            discordMuted: true,
+            discordMuteUntil: data.user?.notificationPreferences?.discordMuteUntil
+          }
+        }));
       }
     } catch {
       setError('Server error.');
@@ -218,12 +243,92 @@ const Profile: React.FC = () => {
     setUpdating(u => ({ ...u, discord: false }));
   };
 
+  const handleMuteDiscord = async () => {
+    setUpdating(u => ({ ...u, notification: true }));
+    setMsg(''); setError('');
+    try {
+      const res = await fetch('/api/auth/me/discord-mute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ duration: muteDuration })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to mute Discord notifications.');
+        setSnackbar({ open: true, message: data.message || 'Failed to mute Discord notifications.', severity: 'error' });
+      } else {
+        setMsg('Discord notifications muted!');
+        setSnackbar({ open: true, message: 'Discord notifications muted!', severity: 'success' });
+        setProfile(p => ({
+          ...p,
+          notificationPreferences: {
+            email: p.notificationPreferences?.email ?? false,
+            discord: p.notificationPreferences?.discord ?? false,
+            ...p.notificationPreferences,
+            discordMuted: true,
+            discordMuteUntil: data.user?.notificationPreferences?.discordMuteUntil
+          }
+        }));
+      }
+    } catch {
+      setError('Server error.');
+      setSnackbar({ open: true, message: 'Server error.', severity: 'error' });
+    }
+    setUpdating(u => ({ ...u, notification: false }));
+    setMuteDialogOpen(false);
+  };
+
+  const handleUnmuteDiscord = async () => {
+    setUpdating(u => ({ ...u, notification: true }));
+    setMsg(''); setError('');
+    try {
+      const res = await fetch('/api/auth/me/discord-unmute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.message || 'Failed to unmute Discord notifications.');
+        setSnackbar({ open: true, message: data.message || 'Failed to unmute Discord notifications.', severity: 'error' });
+      } else {
+        setMsg('Discord notifications unmuted!');
+        setSnackbar({ open: true, message: 'Discord notifications unmuted!', severity: 'success' });
+        setProfile(p => ({
+          ...p,
+          notificationPreferences: {
+            email: p.notificationPreferences?.email ?? false,
+            discord: p.notificationPreferences?.discord ?? false,
+            ...p.notificationPreferences,
+            discordMuted: false,
+            discordMuteUntil: null
+          }
+        }));
+      }
+    } catch {
+      setError('Server error.');
+      setSnackbar({ open: true, message: 'Server error.', severity: 'error' });
+    }
+    setUpdating(u => ({ ...u, notification: false }));
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/');
+  };
+
   return (
     <>
-      <Header 
-        activeSection={''} 
-        onSectionChange={section => navigate('/' + section)} 
-      />
+      {isAdmin ? (
+        <Header activeSection={''} onSectionChange={section => navigate('/' + section)} userId={userId} onLogout={handleLogout} isAdmin />
+      ) : (
+        <UserHeader username={profile.username} avatar={profile.avatar} onLogout={handleLogout} />
+      )}
       <Box
         maxWidth={{ xs: '99%', sm: 400, md: 500 }}
         mx="auto"
@@ -342,6 +447,12 @@ const Profile: React.FC = () => {
               label="Discord"
             />
           </FormGroup>
+          {(profile.notificationPreferences?.discord || profile.discordId) && (
+            <MuiAlert severity="info" sx={{ mt: 2, mb: 1 }}>
+              To receive Discord notifications, you must <b>stay in the Discord server</b> and enable <b>"Allow direct messages from server members"</b> in your Discord privacy settings.<br/>
+              <a href="https://discord.com/invite/playm2m" target="_blank" rel="noopener noreferrer">Join the Server</a>
+            </MuiAlert>
+          )}
           <Button onClick={handleUpdateNotificationPrefs} variant="contained" color="primary" disabled={updating.notification} sx={{ mt: 1, minWidth: 120 }}>
             {updating.notification ? 'Updating...' : 'Save Preferences'}
           </Button>
@@ -353,13 +464,65 @@ const Profile: React.FC = () => {
               {profile.discordId ? (
                 <Tooltip title={`Connected as ${profile.discordUsername || profile.discordId}`}><span style={{ color: '#7289da', fontWeight: 600 }}>{profile.discordUsername || profile.discordId}</span></Tooltip>
               ) : (
-                <Button variant="outlined" color="primary" disabled sx={{ opacity: 0.7 }}>Connect Discord (coming soon)</Button>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={() => {
+                    const token = localStorage.getItem('token');
+                    const discordOAuthUrl = `https://discord.com/oauth2/authorize?client_id=1309860543707746395&redirect_uri=http://localhost:5000/api/auth/discord/callback&response_type=code&scope=identify%20guilds&state=${token}`;
+                    window.location.href = discordOAuthUrl;
+                  }}
+                >
+                  Connect Discord
+                </Button>
               )}
               {profile.discordId && (
                 <Button variant="outlined" color="error" onClick={handleDisconnectDiscord} disabled={updating.discord}>Disconnect</Button>
               )}
             </Box>
+            {!profile.discordId && (
+              <MuiAlert severity="info" sx={{ mt: 1 }}>
+                You must connect your Discord account to receive notifications.
+              </MuiAlert>
+            )}
           </Box>
+          {profile.notificationPreferences?.discord && profile.discordId && (
+            <Box mt={2} mb={2}>
+              {profile.notificationPreferences.discordMuted ? (
+                <>
+                  <MuiAlert severity="warning" sx={{ mb: 1 }}>
+                    Discord notifications are muted.
+                    {profile.notificationPreferences.discordMuteUntil && (
+                      <><br/>Mute ends: {new Date(profile.notificationPreferences.discordMuteUntil).toLocaleString()}</>
+                    )}
+                  </MuiAlert>
+                  <Button variant="contained" color="success" onClick={handleUnmuteDiscord} disabled={updating.notification} sx={{ minWidth: 120, mr: 1 }}>
+                    {updating.notification ? 'Updating...' : 'Unmute Discord'}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outlined" color="warning" onClick={() => setMuteDialogOpen(true)} sx={{ minWidth: 120, mr: 1 }}>
+                    Mute Discord
+                  </Button>
+                </>
+              )}
+            </Box>
+          )}
+          {muteDialogOpen && (
+            <Paper elevation={6} sx={{ p: 3, position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1300, minWidth: 300 }}>
+              <Typography variant="h6" mb={2}>Mute Discord Notifications</Typography>
+              <Box display="flex" flexDirection="column" gap={2}>
+                <Button variant={muteDuration === '60' ? 'contained' : 'outlined'} onClick={() => setMuteDuration('60')}>1 hour</Button>
+                <Button variant={muteDuration === '1440' ? 'contained' : 'outlined'} onClick={() => setMuteDuration('1440')}>1 day</Button>
+                <Button variant={muteDuration === 'forever' ? 'contained' : 'outlined'} onClick={() => setMuteDuration('forever')}>Forever</Button>
+                <Box display="flex" gap={2} mt={2}>
+                  <Button variant="contained" color="primary" onClick={handleMuteDiscord} disabled={updating.notification}>Mute</Button>
+                  <Button variant="outlined" color="secondary" onClick={() => setMuteDialogOpen(false)}>Cancel</Button>
+                </Box>
+              </Box>
+            </Paper>
+          )}
         </Paper>
         <Snackbar
           open={snackbar.open}

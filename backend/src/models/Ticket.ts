@@ -15,7 +15,7 @@ export interface ISatisfactionSurvey {
 export interface ITicket extends Document {
   title: string;
   description: string;
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  status: 'open' | 'in_progress' | 'resolved';
   user: mongoose.Types.ObjectId;
   replies: IReply[];
   nickname: string;
@@ -25,6 +25,8 @@ export interface ITicket extends Document {
   assignedTo?: mongoose.Types.ObjectId;
   satisfactionSurvey?: ISatisfactionSurvey;
   labels?: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 const ReplySchema = new Schema<IReply>({
@@ -42,7 +44,7 @@ const SatisfactionSurveySchema = new Schema<ISatisfactionSurvey>({
 const TicketSchema = new Schema<ITicket>({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  status: { type: String, enum: ['open', 'in_progress', 'resolved', 'closed'], default: 'open' },
+  status: { type: String, enum: ['open', 'in_progress', 'resolved'], default: 'open' },
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   replies: [ReplySchema],
   nickname: { type: String, required: true },
@@ -56,5 +58,6 @@ const TicketSchema = new Schema<ITicket>({
 
 TicketSchema.index({ user: 1 });
 TicketSchema.index({ status: 1 });
+TicketSchema.index({ createdAt: -1 });
 
 export default mongoose.model<ITicket>('Ticket', TicketSchema); 

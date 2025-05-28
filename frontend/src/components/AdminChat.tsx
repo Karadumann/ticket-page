@@ -36,7 +36,6 @@ const AdminChat: React.FC = () => {
       const userId = decoded.id || decoded._id || decoded.userId || '';
       const username = decoded.username || decoded.email || 'Unknown';
       const role = decoded.role || '';
-      console.log('AdminChat user:', { userId, username, role }); // debug
       if (["admin", "superadmin", "staff", "moderator"].includes(role) && userId && username) {
         setIsAdmin(true);
         setUser({ userId, username, role });
@@ -51,7 +50,7 @@ const AdminChat: React.FC = () => {
         return () => { s.disconnect(); };
       }
     } catch (e) {
-      console.error('JWT decode error:', e);
+      // console.error('JWT decode error:', e);
     }
   }, []);
 

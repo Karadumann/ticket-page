@@ -7,9 +7,7 @@ const connectDB = async () => {
       // useUnifiedTopology: true,
       maxPoolSize: 50,
     });
-    console.log('MongoDB bağlantısı başarılı');
   } catch (err) {
-    console.error('MongoDB bağlantı hatası:', err);
     process.exit(1);
   }
 };
