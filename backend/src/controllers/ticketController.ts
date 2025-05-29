@@ -6,6 +6,7 @@ import Notification from '../models/Notification';
 import { PipelineStage } from 'mongoose';
 import { sendMail } from '../utils/sendMail';
 import { sendDiscordMessage } from '../utils/sendDiscordMessage';
+import { createTicketService, replyTicketService, updateTicketStatusService, deleteTicketService } from '../services/ticketService';
 
 interface AuthRequest extends ExpressRequest {
   user?: any;
@@ -25,63 +26,7 @@ export const createTicket = async (req: AuthRequest, res: Response) => {
     if (!nickname || typeof nickname !== 'string' || !nickname.trim()) {
       return res.status(400).json({ message: 'In-game Nickname is required.' });
     }
-    const ticket = new Ticket({
-      title,
-      description,
-      nickname: nickname.trim(),
-      screenshotUrls: Array.isArray(screenshotUrls) ? screenshotUrls.filter((url: string) => !!url) : [],
-      user: req.user.id,
-      category,
-      priority,
-      labels: Array.isArray(labels) ? labels.filter((l: string) => !!l) : [],
-    });
-    await ticket.save();
-    io.emit('new-ticket', ticket);
-    // Notify all admins (excluding the creator if admin)
-    const admins = await (await import('../models/User')).default.find({ role: { $in: ['admin', 'superadmin', 'moderator', 'staff'] } });
-    const notifications = admins
-      .filter(admin => String(admin._id) !== req.user.id)
-      .map(admin => ({
-        user: admin._id,
-        message: `A new ticket has been created: ${title}`,
-        type: 'ticket_created',
-        link: `/tickets/${ticket._id}`
-      }));
-    await Notification.insertMany(notifications);
-    notifications.forEach(n => io.to(String(n.user)).emit('notification', n));
-    if (req.user) {
-      await Log.create({
-        user: req.user.id,
-        action: 'create_ticket',
-        targetType: 'ticket',
-        targetId: ticket._id,
-        details: { ticketId: ticket._id, title, description, nickname, category, priority, labels: Array.isArray(labels) ? labels.filter((l: string) => !!l) : [] },
-      });
-    }
-    const ticketId = (ticket as any)._id?.toString();
-    io.to(ticketId).emit('ticket-updated', ticket);
-    if (req.user) {
-      const user = await (await import('../models/User')).default.findById(req.user.id);
-      const muted = user?.notificationPreferences?.discordMuted;
-      const muteUntil = user?.notificationPreferences?.discordMuteUntil;
-      const now = new Date();
-      const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
-      if (user && user.notificationPreferences?.discord && user.discordId && !isMuted) {
-        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}`;
-        sendDiscordMessage(user.discordId, {
-          type: 'created',
-          description: `Your ticket **${ticket.title}** has been created.`,
-          url,
-          buttonLabel: 'View Ticket',
-          timestamp: ticket.createdAt || new Date(),
-          ticketId: ticket._id?.toString(),
-          category: ticket.category,
-          priority: ticket.priority,
-          createdAt: ticket.createdAt,
-          avatarUrl: user.avatar || undefined
-        }).catch(() => {});
-      }
-    }
+    const ticket = await createTicketService({ title, description, nickname, screenshotUrls, category, priority, labels }, req.user);
     res.status(201).json(ticket);
   } catch (err) {
     res.status(500).json({ message: 'Server error.' });
@@ -123,82 +68,15 @@ export const getTickets = async (req: AuthRequest, res: Response) => {
 export const replyTicket = async (req: AuthRequest, res: Response) => {
   try {
     const { message } = req.body;
-    const ticket = await Ticket.findById(req.params.id);
-    if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
-    ticket.replies.push({ message, user: req.user.id, createdAt: new Date() });
-    await ticket.save();
-    // Notify ticket owner if not the replier
-    if (String(ticket.user) !== req.user.id) {
-      const notif = await Notification.create({
-        user: ticket.user,
-        message: `Your ticket received a new reply: ${ticket.title}`,
-        type: 'ticket_reply',
-        link: `/tickets/${ticket._id}`
-      });
-      io.to(String(ticket.user)).emit('notification', notif);
-      // Bildirim tercihlerine göre e-posta/discord/telegram gönder
-      const user = await (await import('../models/User')).default.findById(ticket.user);
-      if (user && user.notificationPreferences) {
-        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}`;
-        if (user.notificationPreferences.email && user.email) {
-          sendMail({
-            to: user.email,
-            subject: 'Your ticket received a new reply',
-            text: `Your ticket "${ticket.title}" received a new reply.\n\nView: ${url}`
-          }).catch(() => {});
-        }
-        if (user.notificationPreferences.discord && user.discordId) {
-          const muted = user?.notificationPreferences?.discordMuted;
-          const muteUntil = user?.notificationPreferences?.discordMuteUntil;
-          const now = new Date();
-          const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
-          if (!isMuted) {
-            const replier = await (await import('../models/User')).default.findById(req.user.id);
-            sendDiscordMessage(user.discordId, {
-              type: 'reply',
-              description: `**${replier?.username || 'Someone'}** replied to your ticket **${ticket.title}**.\n\nTo see the reply, click the button below.`,
-              url,
-              buttonLabel: 'View Ticket',
-              fields: [
-                { name: 'Replied By', value: replier?.username || 'Unknown', inline: true },
-                { name: 'Date', value: new Date().toLocaleString(), inline: true }
-              ],
-              timestamp: new Date(),
-              ticketId: ticket._id?.toString(),
-              category: ticket.category,
-              priority: ticket.priority,
-              createdAt: ticket.createdAt,
-              avatarUrl: replier?.avatar || undefined
-            }).catch(() => {});
-          }
-        }
-      }
+    if (!message || typeof message !== 'string' || !message.trim()) {
+      return res.status(400).json({ message: 'Message is required.' });
     }
-    // Notify all admins except the replier
-    const admins = await (await import('../models/User')).default.find({ role: { $in: ['admin', 'superadmin', 'moderator', 'staff'] } });
-    const notifications = admins
-      .filter(admin => String(admin._id) !== req.user.id)
-      .map(admin => ({
-        user: admin._id,
-        message: `A ticket received a new reply: ${ticket.title}`,
-        type: 'ticket_reply',
-        link: `/tickets/${ticket._id}`
-      }));
-    await Notification.insertMany(notifications);
-    notifications.forEach(n => io.to(String(n.user)).emit('notification', n));
-    if (req.user) {
-      await Log.create({
-        user: req.user.id,
-        action: 'reply_ticket',
-        targetType: 'ticket',
-        targetId: ticket._id,
-        details: { ticketId: ticket._id, message },
-      });
-    }
-    const ticketId = (ticket as any)._id?.toString();
-    io.to(ticketId).emit('ticket-updated', ticket);
+    const ticket = await replyTicketService(req.params.id, message, req.user);
     res.json(ticket);
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message === 'Ticket not found.') {
+      return res.status(404).json({ message: err.message });
+    }
     res.status(500).json({ message: 'Server error.' });
   }
 };
@@ -246,82 +124,18 @@ export const updateTicketStatus = async (req: any, res: any) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const validStatuses = ['open', 'in_progress', 'resolved'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ message: 'Invalid status.' });
+    if (!status || typeof status !== 'string') {
+      return res.status(400).json({ message: 'Status is required.' });
     }
-    const ticket = await Ticket.findByIdAndUpdate(id, { status }, { new: true });
-    if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
-    if (String(ticket.user) !== req.user.id) {
-      const notif = await Notification.create({
-        user: ticket.user,
-        message: `The status of your ticket changed to ${status}: ${ticket.title}`,
-        type: 'ticket_status',
-        link: `/tickets/${ticket._id}`
-      });
-      io.to(String(ticket.user)).emit('notification', notif);
-      // Bildirim tercihlerine göre e-posta/discord/telegram gönder
-      const user = await (await import('../models/User')).default.findById(ticket.user);
-      if (user && user.notificationPreferences) {
-        const url = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}`;
-        if (user.notificationPreferences.email && user.email) {
-          sendMail({
-            to: user.email,
-            subject: `Ticket status updated: ${status}`,
-            text: `The status of your ticket "${ticket.title}" changed to ${status}.\n\nView: ${url}`
-          }).catch(() => {});
-        }
-        if (user.notificationPreferences.discord && user.discordId) {
-          const muted = user?.notificationPreferences?.discordMuted;
-          const muteUntil = user?.notificationPreferences?.discordMuteUntil;
-          const now = new Date();
-          const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
-          if (!isMuted) {
-            sendDiscordMessage(user.discordId, {
-              type: 'status',
-              description: `The status of your ticket **${ticket.title}** changed to **${status}**.`,
-              url,
-              buttonLabel: 'View Ticket',
-              timestamp: new Date(),
-              ticketId: ticket._id?.toString(),
-              category: ticket.category,
-              priority: ticket.priority,
-              createdAt: ticket.createdAt
-            }).catch(() => {});
-            if (status === 'resolved') {
-              sendDiscordMessage(user.discordId, {
-                type: 'status',
-                title: 'How satisfied are you with the support?',
-                description: 'Your ticket has been resolved. Please rate your experience and leave a comment if you wish.',
-                url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/tickets/${ticket._id}?survey=1`,
-                buttonLabel: 'Rate Support',
-                timestamp: new Date(),
-                ticketId: ticket._id?.toString(),
-                category: ticket.category,
-                priority: ticket.priority,
-                createdAt: ticket.createdAt
-              }).catch(() => {});
-            }
-          }
-        }
-      }
-    }
-    const admins = await (await import('../models/User')).default.find({ role: { $in: ['admin', 'superadmin', 'moderator', 'staff'] } });
-    const notifications = admins
-      .filter(admin => String(admin._id) !== req.user.id)
-      .map(admin => ({
-        user: admin._id,
-        message: `A ticket status was updated to ${status}: ${ticket.title}`,
-        type: 'ticket_status',
-        link: `/tickets/${ticket._id}`
-      }));
-    await Notification.insertMany(notifications);
-    notifications.forEach(n => io.to(String(n.user)).emit('notification', n));
-    const updatedTicket = await Ticket.findById(id);
-    const ticketId = (updatedTicket as any)._id?.toString();
-    io.to(ticketId).emit('ticket-updated', updatedTicket);
+    const ticket = await updateTicketStatusService(id, status, req.user);
     res.json(ticket);
-  } catch (err) {
+  } catch (err: any) {
+    if (err.message === 'Invalid status.') {
+      return res.status(400).json({ message: err.message });
+    }
+    if (err.message === 'Ticket not found.') {
+      return res.status(404).json({ message: err.message });
+    }
     res.status(500).json({ message: 'Status update failed.' });
   }
 };
@@ -329,57 +143,12 @@ export const updateTicketStatus = async (req: any, res: any) => {
 export const deleteTicket = async (req: any, res: any) => {
   try {
     const { id } = req.params;
-    const ticket = await Ticket.findByIdAndDelete(id);
-    if (!ticket) return res.status(404).json({ message: 'Ticket not found.' });
-    if (String(ticket.user) !== req.user.id) {
-      const notif = await Notification.create({
-        user: ticket.user,
-        message: `Your ticket was deleted: ${ticket.title}`,
-        type: 'ticket_deleted',
-        link: `/tickets/${ticket._id}`
-      });
-      io.to(String(ticket.user)).emit('notification', notif);
+    const result = await deleteTicketService(id, req.user);
+    res.json(result);
+  } catch (err: any) {
+    if (err.message === 'Ticket not found.') {
+      return res.status(404).json({ message: err.message });
     }
-    const admins = await (await import('../models/User')).default.find({ role: { $in: ['admin', 'superadmin', 'moderator', 'staff'] } });
-    const notifications = admins
-      .filter(admin => String(admin._id) !== req.user.id)
-      .map(admin => ({
-        user: admin._id,
-        message: `A ticket was deleted: ${ticket.title}`,
-        type: 'ticket_deleted',
-        link: `/tickets/${ticket._id}`
-      }));
-    await Notification.insertMany(notifications);
-    notifications.forEach(n => io.to(String(n.user)).emit('notification', n));
-    if (req.user) {
-      await Log.create({
-        user: req.user.id,
-        action: 'delete_ticket',
-        targetType: 'ticket',
-        targetId: id,
-        details: { ticketId: id, title: ticket.title, user: ticket.user },
-      });
-    }
-    if (ticket && ticket.user) {
-      const user = await (await import('../models/User')).default.findById(ticket.user);
-      const muted = user?.notificationPreferences?.discordMuted;
-      const muteUntil = user?.notificationPreferences?.discordMuteUntil;
-      const now = new Date();
-      const isMuted = muted && (!muteUntil || new Date(muteUntil) > now);
-      if (user && user.notificationPreferences?.discord && user.discordId && !isMuted) {
-        sendDiscordMessage(user.discordId, {
-          type: 'deleted',
-          description: `Your ticket **${ticket.title}** was deleted.`,
-          timestamp: new Date(),
-          ticketId: ticket._id?.toString(),
-          category: ticket.category,
-          priority: ticket.priority,
-          createdAt: ticket.createdAt
-        }).catch(() => {});
-      }
-    }
-    res.json({ message: 'Ticket deleted.' });
-  } catch (err) {
     res.status(500).json({ message: 'Ticket deletion failed.' });
   }
 };
